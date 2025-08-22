@@ -1,134 +1,199 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Package, Users, Target, AlertTriangle, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  TrendingUp, 
+  ShoppingCart, 
+  Package, 
+  Target,
+  Users,
+  AlertCircle,
+  ArrowUp,
+  ArrowDown,
+  BarChart3
+} from "lucide-react";
 
 const Dashboard = () => {
-  const kpis = [
-    { title: "Monthly Sales", value: "₹12,45,000", change: "+15%", icon: TrendingUp, trend: "up" },
-    { title: "Stock Value", value: "₹3,25,000", change: "-5%", icon: Package, trend: "down" },
-    { title: "Active Customers", value: "156", change: "+8%", icon: Users, trend: "up" },
-    { title: "Target Achievement", value: "78%", change: "+12%", icon: Target, trend: "up" },
+  const kpiData = [
+    {
+      title: "Monthly Sales",
+      value: "₹12.45L",
+      change: "+12.3%",
+      changeType: "increase",
+      subtitle: "vs last month",
+      icon: TrendingUp,
+      color: "from-green-500 to-emerald-600"
+    },
+    {
+      title: "Orders Pending",
+      value: "23",
+      change: "-5.2%",
+      changeType: "decrease", 
+      subtitle: "awaiting approval",
+      icon: ShoppingCart,
+      color: "from-blue-500 to-indigo-600"
+    },
+    {
+      title: "Stock Value",
+      value: "₹8.67L",
+      change: "+2.1%",
+      changeType: "increase",
+      subtitle: "current inventory",
+      icon: Package,
+      color: "from-purple-500 to-violet-600"
+    },
+    {
+      title: "Target Achievement",
+      value: "87.5%",
+      change: "+15.2%",
+      changeType: "increase",
+      subtitle: "this quarter",
+      icon: Target,
+      color: "from-orange-500 to-red-600"
+    }
   ];
 
-  const pendingTasks = [
-    { id: 1, task: "Process GRN for Order #1234", priority: "high", type: "GRN" },
-    { id: 2, task: "Update customer billing address", priority: "medium", type: "Customer" },
-    { id: 3, task: "Generate invoice for Order #1235", priority: "high", type: "Invoice" },
-    { id: 4, task: "Register warranty for Product #ABC123", priority: "low", type: "Warranty" },
+  const topProducts = [
+    { rank: 1, name: "Ortho Plus Mattress", sales: "₹2,25,000", units: "45 units sold", growth: "+15%" },
+    { rank: 2, name: "Memory Foam Deluxe", sales: "₹1,92,000", units: "32 units sold", growth: "+8%" },
+    { rank: 3, name: "Spring Classic", sales: "₹1,40,000", units: "28 units sold", growth: "+12%" },
+    { rank: 4, name: "Premium Pillow Set", sales: "₹84,000", units: "35 units sold", growth: "+22%" }
   ];
 
-  const recentOrders = [
-    { id: "ORD-001", customer: "Retail Store A", amount: "₹45,000", status: "Pending" },
-    { id: "ORD-002", customer: "Retail Store B", amount: "₹32,000", status: "Approved" },
-    { id: "ORD-003", customer: "Retail Store C", amount: "₹28,000", status: "Dispatched" },
+  const recentActivities = [
+    { type: "order", message: "New order #ORD-2024-156 from Retail Store A", time: "2 hours ago", urgent: false },
+    { type: "stock", message: "Low stock alert: Memory Foam Pillow", time: "4 hours ago", urgent: true },
+    { type: "customer", message: "New customer registration: Dream Sleep Center", time: "6 hours ago", urgent: false },
+    { type: "payment", message: "Payment received for invoice #INV-2024-089", time: "1 day ago", urgent: false }
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's your business overview.</p>
+        <p className="text-gray-600">Welcome back! Here's what's happening with your dealership.</p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{kpi.title}</CardTitle>
-              <kpi.icon className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{kpi.value}</div>
-              <p className={`text-xs ${kpi.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                {kpi.change} from last month
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {kpiData.map((kpi, index) => {
+          const Icon = kpi.icon;
+          return (
+            <Card key={index} className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className={`bg-gradient-to-r ${kpi.color} p-4`}>
+                  <div className="flex items-center justify-between text-white">
+                    <div>
+                      <p className="text-white/80 text-sm">{kpi.title}</p>
+                      <p className="text-2xl font-bold">{kpi.value}</p>
+                    </div>
+                    <Icon className="h-8 w-8 text-white/80" />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {kpi.changeType === "increase" ? (
+                        <ArrowUp className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4 text-red-600" />
+                      )}
+                      <span className={`font-medium ${
+                        kpi.changeType === "increase" ? "text-green-600" : "text-red-600"
+                      }`}>
+                        {kpi.change}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-500">{kpi.subtitle}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Target Progress */}
+        {/* Sales Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Target Progress</CardTitle>
-            <CardDescription>Your sales performance this month</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Sales Overview
+            </CardTitle>
+            <p className="text-sm text-gray-600">Your sales performance over the last 6 months</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm">
-                <span>Sales Target</span>
-                <span>₹12,45,000 / ₹16,00,000</span>
-              </div>
-              <Progress value={78} className="mt-2" />
+          <CardContent>
+            <div className="h-64 flex items-end justify-between gap-2">
+              {[3.0, 2.8, 3.5, 4.2, 3.8, 4.5].map((height, index) => (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div 
+                    className="w-full bg-gradient-to-t from-blue-500 to-indigo-600 rounded-t"
+                    style={{ height: `${height * 40}px` }}
+                  />
+                  <span className="text-xs text-gray-500 mt-2">
+                    {['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][index]}
+                  </span>
+                </div>
+              ))}
             </div>
-            <div>
-              <div className="flex justify-between text-sm">
-                <span>Volume Target</span>
-                <span>156 / 200 units</span>
-              </div>
-              <Progress value={78} className="mt-2" />
+            <div className="flex items-center justify-between text-sm text-gray-500 mt-4">
+              <span>₹3.0L</span>
+              <span>₹4.5L</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Pending Tasks */}
+        {/* Top Products */}
         <Card>
           <CardHeader>
-            <CardTitle>Pending Tasks</CardTitle>
-            <CardDescription>Items requiring your attention</CardDescription>
+            <CardTitle>Top Products</CardTitle>
+            <p className="text-sm text-gray-600">Best selling mattresses this month</p>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {pendingTasks.map((task) => (
-                <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {task.priority === 'high' ? (
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    )}
-                    <div>
-                      <p className="text-sm font-medium">{task.task}</p>
-                      <p className="text-xs text-gray-500">{task.type}</p>
-                    </div>
-                  </div>
-                  <Badge variant={task.priority === 'high' ? 'destructive' : 'secondary'}>
-                    {task.priority}
-                  </Badge>
+          <CardContent className="space-y-4">
+            {topProducts.map((product) => (
+              <div key={product.rank} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                  {product.rank}
                 </div>
-              ))}
-            </div>
+                <div className="flex-1">
+                  <h4 className="font-medium">{product.name}</h4>
+                  <p className="text-sm text-gray-500">{product.units}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{product.sales}</p>
+                  <p className="text-sm text-green-600">{product.growth}</p>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Orders */}
+      {/* Recent Activities */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
-          <CardDescription>Latest orders from your customers</CardDescription>
+          <CardTitle className="flex items-center justify-between">
+            Recent Activities
+            <Button variant="outline" size="sm">View All</Button>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {recentOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">{order.id}</p>
-                  <p className="text-sm text-gray-500">{order.customer}</p>
+          <div className="space-y-4">
+            {recentActivities.map((activity, index) => (
+              <div key={index} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg">
+                <div className={`w-2 h-2 rounded-full ${activity.urgent ? 'bg-red-500' : 'bg-blue-500'}`} />
+                <div className="flex-1">
+                  <p className="text-sm">{activity.message}</p>
+                  <p className="text-xs text-gray-500">{activity.time}</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">{order.amount}</p>
-                  <Badge variant={
-                    order.status === 'Pending' ? 'secondary' :
-                    order.status === 'Approved' ? 'default' : 'outline'
-                  }>
-                    {order.status}
+                {activity.urgent && (
+                  <Badge variant="destructive" className="text-xs">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Urgent
                   </Badge>
-                </div>
+                )}
               </div>
             ))}
           </div>
