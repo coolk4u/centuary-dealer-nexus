@@ -31,7 +31,7 @@ import {
 
 const navigationItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Product Catalog", url: "/products", icon: Package },
+  { title: "Product Catalog", url: "/catalog", icon: Package },
   { title: "Shopping Cart", url: "/cart", icon: ShoppingCart },
   { title: "Orders", url: "/orders", icon: ClipboardList },
   { title: "Customers", url: "/customers", icon: Users },
@@ -60,7 +60,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r-0 sidebar-gradient">
+    <Sidebar className="border-r-0 bg-gradient-to-b from-blue-600 via-blue-700 to-blue-800 text-white">
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
