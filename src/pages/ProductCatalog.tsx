@@ -73,6 +73,21 @@ const ProductCatalog = () => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
 
+  // Save selected customer to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedCustomer) {
+      localStorage.setItem('selectedCustomer', selectedCustomer);
+    }
+  }, [selectedCustomer]);
+
+  // Load selected customer from localStorage on component mount
+  useEffect(() => {
+    const savedCustomer = localStorage.getItem('selectedCustomer');
+    if (savedCustomer) {
+      setSelectedCustomer(savedCustomer);
+    }
+  }, []);
+
   // Step 1: Get Access Token
   const getAccessToken = async () => {
     const salesforceUrl =
