@@ -76,6 +76,14 @@ const Cart = () => {
     }
   }, []);
 
+  // Load selected customer from localStorage on component mount
+  useEffect(() => {
+    const savedCustomer = localStorage.getItem('selectedCustomer');
+    if (savedCustomer) {
+      setSelectedCustomer(savedCustomer);
+    }
+  }, []);
+
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
@@ -317,7 +325,7 @@ const Cart = () => {
             </CardHeader>
             <CardContent className="space-y-4 p-4 sm:p-6">
               <div>
-                <Label>Select Customer</Label>
+                <Label>Selected Customer</Label>
                 <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                   <SelectTrigger className="text-sm md:text-base">
                     <SelectValue placeholder="Choose customer" />
