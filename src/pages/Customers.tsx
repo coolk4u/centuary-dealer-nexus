@@ -1,5 +1,5 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,45 +10,133 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, Edit, MapPin, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
 
-const Customers = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [customers, setCustomers] = useState([
-    {
-      id: "CUS-001",
-      name: "Retail Store A",
-      contactPerson: "John Doe",
-      phone: "+91 98765 43210",
-      email: "john@retaila.com",
-      location: "Mumbai",
-      billingAddress: "123 Main St, Mumbai, MH 400001",
-      shippingAddress: "123 Main St, Mumbai, MH 400001",
-      gst: "27ABCDE1234F1Z5",
-      totalOrders: 25,
-      lastOrderDate: "2024-01-15",
-      status: "Active"
-    },
-    {
-      id: "CUS-002", 
-      name: "Retail Store B",
-      contactPerson: "Jane Smith",
-      phone: "+91 98765 43211",
-      email: "jane@retailb.com",
-      location: "Delhi",
-      billingAddress: "456 Park Ave, Delhi, DL 110001",
-      shippingAddress: "456 Park Ave, Delhi, DL 110001", 
-      gst: "07FGHIJ5678K2L6",
-      totalOrders: 18,
-      lastOrderDate: "2024-01-12",
-      status: "Active"
-    }
-  ]);
+interface AccountRecord {
+  Id: string;
+  Name: string;
+  Rating: string;
+  BillingCity: string;
+  ShippingCity: string;
+  LastModifiedDate: string;
+  Contacts?: {
+    records: Array<{
+      Phone?: string;
+      Email?: string;
+    }>;
+  };
+}
 
+const Customers = () => {
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
 
+  // Step 1: Get Access Token
+  const getAccessToken = async () => {
+    const salesforceUrl =
+      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
+    const clientId =
+      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
+    const clientSecret =
+      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
+
+    const params = new URLSearchParams();
+    params.append("grant_type", "client_credentials");
+    params.append("client_id", clientId);
+    params.append("client_secret", clientSecret);
+
+    try {
+      const response = await axios.post(salesforceUrl, params, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      setAccessToken(response.data.access_token);
+      console.log("✅ Access Token:", response.data.access_token);
+    } catch (err: unknown) {
+      const errorMessage = axios.isAxiosError(err) 
+        ? err.response?.data?.message || err.message 
+        : "Unknown error occurred";
+      
+      console.error("❌ Error fetching access token:", errorMessage);
+      setError("Failed to fetch access token.");
+    }
+  };
+
+  // Function to format date to show only the date part
+  const formatDate = (dateString: string) => {
+    if (!dateString || dateString === "N/A") return "N/A";
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString(); // Formats to local date format (e.g., "9/1/2025")
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid Date";
+    }
+  };
+
+  useEffect(() => {
+    getAccessToken();
+  }, []);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const fetchData = async () => {
+      try {
+        const query = `SELECT Id, Name, Rating, BillingCity, ShippingCity, LastModifiedDate,
+       (SELECT Phone, Email FROM Contacts WHERE Phone != null OR Email != null)
+FROM Account 
+WHERE Owner.Name = 'Piyush P'
+`;
+        const encodedQuery = encodeURIComponent(query);
+        const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
+
+        const response = await axios.get(queryUrl, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        const records: AccountRecord[] = response.data.records;
+
+        if (records && records.length > 0) {
+          console.log("📦 Fetched Accounts:", records);
+          
+          // Map the Salesforce data to the customer format
+          const mappedCustomers = records.map(account => ({
+            id: account.Id,
+            name: account.Name,
+            phone: account.Contacts?.records[0]?.Phone || "N/A",
+            email: account.Contacts?.records[0]?.Email || "N/A",
+            location: account.BillingCity || "N/A",
+            billingAddress: account.BillingCity || "N/A",
+            shippingAddress: account.ShippingCity || "N/A",
+            lastOrderDate: account.LastModifiedDate || "N/A",
+            status: account.Rating || "N/A"
+          }));
+          
+          setCustomers(mappedCustomers);
+        } else {
+          console.log("ℹ️ No account records found.");
+        }
+      } catch (err: unknown) {
+        const errorMessage = axios.isAxiosError(err) 
+          ? err.response?.data?.message || err.message 
+          : "Unknown error occurred";
+        
+        console.error("❌ Error fetching data:", errorMessage);
+        setError("Failed to fetch data from Salesforce.");
+      }
+    };
+
+    fetchData();
+  }, [accessToken]);
+
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -64,6 +152,14 @@ const Customers = () => {
     toast.success("Customer updated successfully!");
     setSelectedCustomer(null);
   };
+
+  if (error) {
+    return <div className="p-6 text-red-500">Error: {error}</div>;
+  }
+
+  if (customers.length === 0) {
+    return <div className="p-6">Loading customers...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -91,7 +187,6 @@ const Customers = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">{customer.name}</CardTitle>
-                  <p className="text-sm text-gray-600">{customer.contactPerson}</p>
                 </div>
                 <Badge variant={customer.status === "Active" ? "default" : "secondary"}>
                   {customer.status}
@@ -114,12 +209,8 @@ const Customers = () => {
               
               <div className="pt-3 border-t">
                 <div className="flex justify-between text-sm">
-                  <span>Total Orders:</span>
-                  <span className="font-medium">{customer.totalOrders}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Last Order:</span>
-                  <span className="font-medium">{customer.lastOrderDate}</span>
+                  <span>Last Modified:</span>
+                  <span className="font-medium">{formatDate(customer.lastOrderDate)}</span>
                 </div>
               </div>
 
@@ -147,13 +238,6 @@ const Customers = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Contact Person</Label>
-                      <Input
-                        value={editForm.contactPerson || ""}
-                        onChange={(e) => setEditForm({...editForm, contactPerson: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
                       <Label>Phone</Label>
                       <Input
                         value={editForm.phone || ""}
@@ -165,13 +249,6 @@ const Customers = () => {
                       <Input
                         value={editForm.email || ""}
                         onChange={(e) => setEditForm({...editForm, email: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>GST Number</Label>
-                      <Input
-                        value={editForm.gst || ""}
-                        onChange={(e) => setEditForm({...editForm, gst: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">

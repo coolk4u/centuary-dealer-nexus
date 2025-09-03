@@ -14,12 +14,12 @@ export function Header() {
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" className="relative" onClick={() => navigate('/cart')}>
           <ShoppingCart className="h-4 w-4" />
-          <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs">3</Badge>
+          <Badge className="absolute top-1 -right-1 h-2 w-2 p-0 text-xs"></Badge>
         </Button>
         
         <Button variant="outline" size="icon">
           <Bell className="h-4 w-4" />
-          <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs mx-[24px] py-[20px]">5</Badge>
+          {/* <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs mx-[24px] py-[20px]"></Badge> */}
         </Button>
         
         <Button variant="outline" size="icon" onClick={() => navigate('/profile')}>
