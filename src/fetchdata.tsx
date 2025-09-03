@@ -33,10 +33,10 @@ const FetchData = () => {
       setAccessToken(response.data.access_token);
       console.log("✅ Access Token:", response.data.access_token);
     } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.message || err.message 
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
         : "Unknown error occurred";
-      
+
       console.error("❌ Error fetching access token:", errorMessage);
       setError("Failed to fetch access token.");
     }
@@ -51,7 +51,8 @@ const FetchData = () => {
 
     const fetchData = async () => {
       try {
-        const query = `SELECT Id, Name, StageName, CloseDate FROM Opportunity`;
+        const query = `SELECT Id, Name, Order__r.OrderNumber, Type__c, Status__c, Invoice_Amount__c FROM Invoice__c WHERE Account__r.Name = 'Centuary Distributer Account'
+`;
         const encodedQuery = encodeURIComponent(query);
         const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
 
@@ -71,10 +72,10 @@ const FetchData = () => {
           console.log("ℹ️ No opportunity records found.");
         }
       } catch (err: unknown) {
-        const errorMessage = axios.isAxiosError(err) 
-          ? err.response?.data?.message || err.message 
+        const errorMessage = axios.isAxiosError(err)
+          ? err.response?.data?.message || err.message
           : "Unknown error occurred";
-        
+
         console.error("❌ Error fetching data:", errorMessage);
         setError("Failed to fetch data from Salesforce.");
       }

@@ -1,5 +1,5 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,124 +7,176 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, ShoppingCart, Eye, Package, User } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+
+interface ProductRecord {
+  Id: string;
+  Name: string;
+  Family: string;
+  MRP__c: number;
+  Prod_Img_Url__c: string;
+  Description: string;
+  Specifications__c: string;
+  UnitPrice: number;
+  Product2: {
+    Id: string;
+    Name: string;
+    Family: string;
+    MRP__c: number;
+    Prod_Img_Url__c: string;
+    Description: string;
+    Specifications__c: string;
+  };
+}
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  discount: number;
+  mrp?: number;
+  image?: string;
+  category?: string;
+}
 
 const ProductCatalog = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedCustomer, setSelectedCustomer] = useState("");
-  const [cartItems, setCartItems] = useState<{[key: string]: number}>({});
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Mock customers data
   const customers = [
-    { id: "CUS-001", name: "Retail Store A", contactPerson: "John Doe", location: "Mumbai" },
-    { id: "CUS-002", name: "Retail Store B", contactPerson: "Jane Smith", location: "Delhi" },
-    { id: "CUS-003", name: "Comfort Mattress House", contactPerson: "Raj Kumar", location: "Bangalore" },
-    { id: "CUS-004", name: "Sleep Well Store", contactPerson: "Priya Sharma", location: "Chennai" },
-    { id: "CUS-005", name: "Dream Sleep Center", contactPerson: "Amit Patel", location: "Pune" }
+    { id: "CUS-001", name: "Standard Trading Company", contactPerson: "Dinesh Kumar", location: "Jubilee Hills, Hyderabad" },
+    // { id: "CUS-002", name: "Sleepwell Showroom", contactPerson: "Rajesh K", location: "Banjara Hills, Hyderabad" },
+    { id: "CUS-003", name: "Anu Furniture", contactPerson: "Satish Kumar", location: "Kokapet, Hyderabad" },
+    { id: "CUS-004", name: "The Comfort Korner", contactPerson: "Bhanu Kumar", location: "Kondapur, Hyderabad"},
+    // { id: "CUS-005", name: "Dream Sleep Center", contactPerson: "Amit Patel", location: "Pune" }
   ];
 
-  const products = [
-    {
-      id: "MAT-001",
-      name: "Centuary Ortho Plus Mattress",
-      category: "Mattresses",
-      price: 25000,
-      mrp: 30000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["King Size", "Memory Foam", "10 Year Warranty"],
-      description: "Premium orthopedic mattress with memory foam for superior comfort"
-    },
-    {
-      id: "MAT-002", 
-      name: "Centuary Memory Foam Deluxe",
-      category: "Mattresses",
-      price: 32000,
-      mrp: 38000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Queen Size", "Memory Foam", "15 Year Warranty"],
-      description: "Luxury memory foam mattress with temperature regulation"
-    },
-    {
-      id: "MAT-003",
-      name: "Centuary Spring Classic",
-      category: "Mattresses", 
-      price: 18000,
-      mrp: 22000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Double Size", "Spring Coil", "8 Year Warranty"],
-      description: "Traditional spring mattress with firm support"
-    },
-    {
-      id: "MAT-004",
-      name: "Centuary Latex Premium",
-      category: "Mattresses",
-      price: 45000,
-      mrp: 52000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png", 
-      specifications: ["King Size", "Natural Latex", "20 Year Warranty"],
-      description: "Premium natural latex mattress for ultimate comfort"
-    },
-    {
-      id: "PIL-001", 
-      name: "Centuary Memory Pillow",
-      category: "Pillows",
-      price: 2500,
-      mrp: 3000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Memory Foam", "Contour Support", "2 Year Warranty"],
-      description: "Ergonomic memory foam pillow for better sleep posture"
-    },
-    {
-      id: "PIL-002",
-      name: "Centuary Latex Pillow",
-      category: "Pillows",
-      price: 3200,
-      mrp: 4000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Natural Latex", "Breathable", "3 Year Warranty"],
-      description: "Natural latex pillow with excellent breathability"
-    },
-    {
-      id: "PIL-003",
-      name: "Centuary Fiber Pillow Set",
-      category: "Pillows",
-      price: 1800,
-      mrp: 2200,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Fiber Fill", "Set of 2", "1 Year Warranty"],
-      description: "Soft fiber fill pillow set for everyday comfort"
-    },
-    {
-      id: "ACC-001",
-      name: "Mattress Protector Waterproof",
-      category: "Accessories",
-      price: 1500,
-      mrp: 2000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Waterproof", "Breathable", "Queen Size"],
-      description: "Waterproof mattress protector with breathable fabric"
-    },
-    {
-      id: "ACC-002",
-      name: "Bed Sheet Set Premium",
-      category: "Accessories",
-      price: 2800,
-      mrp: 3500,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Cotton Blend", "King Size", "4 Piece Set"],
-      description: "Premium cotton blend bed sheet set with pillow covers"
-    },
-    {
-      id: "ACC-003",
-      name: "Mattress Topper Memory Foam",
-      category: "Accessories",
-      price: 8500,
-      mrp: 10000,
-      image: "/lovable-uploads/f2b2c506-5276-470f-a8cb-bb893408756b.png",
-      specifications: ["Memory Foam", "3 Inch Thickness", "Queen Size"],
-      description: "Memory foam mattress topper for added comfort"
+  // Load cart from localStorage on component mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cartItems');
+    if (savedCart) {
+      setCartItems(JSON.parse(savedCart));
     }
-  ];
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  // Step 1: Get Access Token
+  const getAccessToken = async () => {
+    const salesforceUrl =
+      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
+    const clientId =
+      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
+    const clientSecret =
+      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
+
+    const params = new URLSearchParams();
+    params.append("grant_type", "client_credentials");
+    params.append("client_id", clientId);
+    params.append("client_secret", clientSecret);
+
+    try {
+      const response = await axios.post(salesforceUrl, params, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      setAccessToken(response.data.access_token);
+      console.log("✅ Access Token:", response.data.access_token);
+      return response.data.access_token;
+    } catch (err: unknown) {
+      const errorMessage = axios.isAxiosError(err) 
+        ? err.response?.data?.message || err.message 
+        : "Unknown error occurred";
+      
+      console.error("❌ Error fetching access token:", errorMessage);
+      setError("Failed to fetch access token.");
+      return null;
+    }
+  };
+
+  const fetchProducts = async (token: string) => {
+    try {
+      const query = `SELECT 
+    Product2.Id, 
+    Product2.Name, 
+    Product2.Family, 
+    Product2.MRP__c, 
+    Product2.Prod_Img_Url__c, 
+    Product2.Description, 
+    Product2.Specifications__c,
+    UnitPrice
+    FROM PricebookEntry
+    WHERE Pricebook2.IsStandard = true
+    AND IsActive = true
+    AND Product2.IsActive = true
+    AND Product2.Family IN ('Mattress', 'Pillow', 'Mat')
+`;
+      const encodedQuery = encodeURIComponent(query);
+      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
+
+      const response = await axios.get(queryUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const records: ProductRecord[] = response.data.records;
+
+      if (records && records.length > 0) {
+        console.log("📦 Fetched Products:", records);
+        
+        // Map the Salesforce data to the product format needed by the component
+        const mappedProducts = records.map(record => ({
+          id: record.Product2.Id,
+          name: record.Product2.Name,
+          category: record.Product2.Family,
+          price: record.UnitPrice,
+          mrp: record.Product2.MRP__c,
+          image: record.Product2.Prod_Img_Url__c,
+          specifications: record.Product2.Specifications__c ? 
+            record.Product2.Specifications__c.split(';') : [],
+          description: record.Product2.Description
+        }));
+        
+        setProducts(mappedProducts);
+      } else {
+        console.log("ℹ️ No product records found.");
+        setProducts([]);
+      }
+    } catch (err: unknown) {
+      const errorMessage = axios.isAxiosError(err) 
+        ? err.response?.data?.message || err.message 
+        : "Unknown error occurred";
+      
+      console.error("❌ Error fetching data:", errorMessage);
+      setError("Failed to fetch data from Salesforce.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializeData = async () => {
+      const token = await getAccessToken();
+      if (token) {
+        await fetchProducts(token);
+      }
+    };
+    
+    initializeData();
+  }, []);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -132,22 +184,63 @@ const ProductCatalog = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (productId: string) => {
+  const addToCart = (product: any) => {
     if (!selectedCustomer) {
       toast.error("Please select a customer first!");
       return;
     }
     
-    setCartItems(prev => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1
-    }));
+    const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
+    
+    if (existingItemIndex >= 0) {
+      // Update quantity if product already in cart
+      const updatedCartItems = [...cartItems];
+      updatedCartItems[existingItemIndex].quantity += 1;
+      setCartItems(updatedCartItems);
+    } else {
+      // Add new product to cart
+      const newCartItem: CartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        discount: 0,
+        mrp: product.mrp,
+        image: product.image,
+        category: product.category
+      };
+      setCartItems([...cartItems, newCartItem]);
+    }
     
     const customer = customers.find(c => c.id === selectedCustomer);
-    toast.success(`Product added to cart for ${customer?.name}!`);
+      toast.success(`Product added to cart for ${customer?.name}!`, {
+    position: "top-right",
+    duration: 2000,
+  });
   };
 
-  const getCartQuantity = (productId: string) => cartItems[productId] || 0;
+  const getCartQuantity = (productId: string) => {
+    const item = cartItems.find(item => item.id === productId);
+    return item ? item.quantity : 0;
+  };
+
+  const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Loading products...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -200,9 +293,9 @@ const ProductCatalog = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="Mattresses">Mattresses</SelectItem>
-            <SelectItem value="Pillows">Pillows</SelectItem>
-            <SelectItem value="Accessories">Accessories</SelectItem>
+            <SelectItem value="Mattress">Mattresses</SelectItem>
+            <SelectItem value="Pillow">Pillows</SelectItem>
+            <SelectItem value="Mat">Mats</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -214,7 +307,15 @@ const ProductCatalog = () => {
           return (
             <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="aspect-video bg-gray-100 flex items-center justify-center">
-                <Package className="h-16 w-16 text-gray-400" />
+                {product.image ? (
+                  <img 
+                    src={product.image} 
+                    alt={product.name}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <Package className="h-16 w-16 text-gray-400" />
+                )}
               </div>
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -225,21 +326,25 @@ const ProductCatalog = () => {
               <CardContent className="space-y-4">
                 <p className="text-sm text-gray-600">{product.description}</p>
                 
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Specifications:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {product.specifications.map((spec, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {spec}
-                      </Badge>
-                    ))}
+                {product.specifications && product.specifications.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Specifications:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {product.specifications.map((spec: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {spec}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="text-xl font-bold text-green-600">₹{product.price.toLocaleString()}</div>
-                    <div className="text-sm text-gray-500 line-through">₹{product.mrp.toLocaleString()}</div>
+                    <div className="text-xl font-bold text-green-600">₹{product.price?.toLocaleString()}</div>
+                    {product.mrp && (
+                      <div className="text-sm text-gray-500 line-through">₹{product.mrp.toLocaleString()}</div>
+                    )}
                   </div>
                   <div className="flex gap-2 items-center">
                     <Button variant="outline" size="sm">
@@ -253,7 +358,7 @@ const ProductCatalog = () => {
                       )}
                       <Button 
                         size="sm" 
-                        onClick={() => addToCart(product.id)}
+                        onClick={() => addToCart(product)}
                         disabled={!selectedCustomer}
                         className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                       >
@@ -269,15 +374,15 @@ const ProductCatalog = () => {
         })}
       </div>
 
-      {Object.keys(cartItems).length > 0 && (
+      {cartItems.length > 0 && (
         <div className="fixed bottom-4 right-4">
           <Button 
             size="lg"
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
-            onClick={() => window.location.href = '/cart'}
+            onClick={() => navigate('/cart')}
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
-            View Cart ({Object.values(cartItems).reduce((a, b) => a + b, 0)})
+            View Cart ({totalCartItems})
           </Button>
         </div>
       )}
