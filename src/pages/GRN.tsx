@@ -19,24 +19,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, Package, FileText } from "lucide-react";
+import { Package, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 interface GRNRecord {
   Id: string;
   Name: string;
-  Order__r: {
+  Order__r?: {
     OrderNumber: string;
   };
-  Distributor_Account__r: {
+  Distributor_Account__r?: {
     Name: string;
   };
-  GRN_Line_Items__r: {
+  GRN_Line_Items__r?: {
     records: Array<{
+      Id: string;
       Quantity__c: number;
       Received__c: number;
       Product__c: string;
-      Product__r: {
+      Product__r?: {
         Name: string;
       };
       Total_Amount__c: number;
@@ -47,6 +48,7 @@ interface GRNRecord {
 
 interface ProcessedGRNRecord {
   id: string;
+  grnNumber: string;
   orderNumber: string;
   supplier: string;
   totalItems: number;
@@ -68,8 +70,9 @@ const GRN = () => {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Step 1: Get Access Token
+  // Get Access Token
   const getAccessToken = async () => {
     const salesforceUrl =
       "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
@@ -89,6 +92,7 @@ const GRN = () => {
       });
       setAccessToken(response.data.access_token);
       console.log("✅ Access Token:", response.data.access_token);
+      return response.data.access_token;
     } catch (err: unknown) {
       const errorMessage = axios.isAxiosError(err)
         ? err.response?.data?.message || err.message
@@ -96,19 +100,32 @@ const GRN = () => {
 
       console.error("❌ Error fetching access token:", errorMessage);
       setError("Failed to fetch access token.");
+      setLoading(false);
+      throw new Error(errorMessage);
     }
   };
 
   useEffect(() => {
-    getAccessToken();
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+        const token = await getAccessToken();
+        if (token) {
+          await fetchData(token);
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+        setError("Failed to initialize application.");
+        setLoading(false);
+      }
+    };
+
+    initializeData();
   }, []);
 
-  useEffect(() => {
-    if (!accessToken) return;
-
-    const fetchData = async () => {
-      try {
-        const query = `SELECT 
+  const fetchData = async (token: string) => {
+    try {
+      const query = `SELECT 
     Id, 
     Name,
     Order__r.OrderNumber,
@@ -120,63 +137,90 @@ const GRN = () => {
     WHERE CreatedDate = LAST_N_DAYS:7
     ORDER BY CreatedDate DESC
     LIMIT 1000`;
-        const encodedQuery = encodeURIComponent(query);
-        const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
+      const encodedQuery = encodeURIComponent(query);
+      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
 
-        const response = await axios.get(queryUrl, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        });
+      console.log("Fetching data from:", queryUrl);
 
-        const records: GRNRecord[] = response.data.records;
+      const response = await axios.get(queryUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      });
 
-        if (records && records.length > 0) {
-          console.log("📦 Fetched GRN Records:", records);
+      console.log("API Response:", response.data);
 
-          // Transform the Salesforce data to match the UI structure
-          const processedRecords: ProcessedGRNRecord[] = records.map(
-            (record) => ({
-              id: record.Name, // Using Name as id
+      // Check if records exists and is an array
+      if (!response.data.records || !Array.isArray(response.data.records)) {
+        console.error("❌ Invalid response format - records is null or not an array");
+        setError("No GRN records found or invalid response format.");
+        setLoading(false);
+        return;
+      }
+
+      const records: GRNRecord[] = response.data.records;
+
+      if (records.length > 0) {
+        console.log("📦 Fetched GRN Records:", records);
+
+        // Transform the Salesforce data to match the UI structure
+        const processedRecords: ProcessedGRNRecord[] = records.map(
+          (record) => {
+            // Extract line items safely
+            const lineItems = record.GRN_Line_Items__r?.records || [];
+            
+            return {
+              id: record.Id, // Using Salesforce Id as the unique identifier
+              grnNumber: record.Name, // Using Name as the GRN number for display
               orderNumber: record.Order__r?.OrderNumber || "N/A",
-              supplier:
-                record.Distributor_Account__r?.Name || "Unknown Supplier", // Updated to use Distributor_Account__r.Name
-              totalItems: record.GRN_Line_Items__r.records.reduce(
-                (sum, item) => sum + item.Quantity__c,
+              supplier: record.Distributor_Account__r?.Name || "Unknown Supplier",
+              totalItems: lineItems.reduce(
+                (sum, item) => sum + (item.Quantity__c || 0),
                 0
               ),
-              receivedItems: record.GRN_Line_Items__r.records.reduce(
+              receivedItems: lineItems.reduce(
                 (sum, item) => sum + (item.Received__c || 0),
                 0
               ),
               status: record.GRN_Status__c || "Pending",
-              products: record.GRN_Line_Items__r.records.map((item) => ({
-                id: item.Product__c,
-                name: item.Product__r.Name,
-                ordered: item.Quantity__c,
+              products: lineItems.map((item) => ({
+                id: item.Id || item.Product__c,
+                name: item.Product__r?.Name || "Unknown Product",
+                ordered: item.Quantity__c || 0,
                 received: item.Received__c || 0,
-                price: item.Total_Amount__c,
+                price: item.Total_Amount__c || 0,
               })),
-            })
-          );
+            };
+          }
+        );
 
-          setGrnRecords(processedRecords);
-        } else {
-          console.log("ℹ️ No GRN records found.");
-        }
-      } catch (err: unknown) {
-        const errorMessage = axios.isAxiosError(err)
-          ? err.response?.data?.message || err.message
-          : "Unknown error occurred";
-
-        console.error("❌ Error fetching data:", errorMessage);
-        setError("Failed to fetch data from Salesforce.");
+        console.log("📊 Processed Records:", processedRecords);
+        setGrnRecords(processedRecords);
+      } else {
+        console.log("ℹ️ No GRN records found.");
+        setError("No GRN records found for the last 7 days.");
       }
-    };
-
-    fetchData();
-  }, [accessToken]);
+      setLoading(false);
+    } catch (err: unknown) {
+      console.error("❌ Full error object:", err);
+      
+      let errorMessage = "Unknown error occurred";
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.response?.data?.[0]?.message || 
+                      err.response?.data?.error_description || 
+                      err.response?.statusText || 
+                      err.message;
+        console.error("❌ HTTP Status:", err.response?.status);
+        console.error("❌ Response Data:", err.response?.data);
+      }
+      
+      console.error("❌ Error fetching data:", errorMessage);
+      setError(`Failed to fetch data from Salesforce: ${errorMessage}`);
+      setLoading(false);
+    }
+  };
 
   const processGRN = (
     grnId: string,
@@ -250,12 +294,47 @@ const GRN = () => {
     updateInventoryStock(productId, receivedQty);
   };
 
+  const retryFetchData = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      if (accessToken) {
+        await fetchData(accessToken);
+      } else {
+        const token = await getAccessToken();
+        if (token) {
+          await fetchData(token);
+        }
+      }
+    } catch (error) {
+      console.error("Retry failed:", error);
+      setError("Failed to fetch data. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-4">Loading GRN data...</div>;
+  }
+
   if (error) {
-    return <div className="p-4 text-red-500">Error: {error}</div>;
+    return (
+      <div className="p-4">
+        <div className="text-red-500 mb-4">Error: {error}</div>
+        <Button onClick={retryFetchData}>Retry</Button>
+      </div>
+    );
   }
 
   if (grnRecords.length === 0) {
-    return <div className="p-4">Loading GRN data...</div>;
+    return (
+      <div className="p-4">
+        <div>No GRN records found.</div>
+        <Button onClick={retryFetchData} className="mt-4">
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -275,7 +354,7 @@ const GRN = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5" />
-                    {grn.id}
+                    {grn.grnNumber || grn.id}
                   </CardTitle>
                   <p className="text-sm text-gray-600">
                     Order: {grn.orderNumber}
@@ -319,7 +398,7 @@ const GRN = () => {
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Process GRN - {grn.id}</DialogTitle>
+                    <DialogTitle>Process GRN - {grn.grnNumber || grn.id}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <Table>
@@ -351,17 +430,6 @@ const GRN = () => {
                               />
                             </TableCell>
                             <TableCell>
-                              {/* <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  processGRN(grn.id, product.id, product.ordered);
-                                  updateInventoryStock(product.id, product.ordered);
-                                }}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Accept All
-                              </Button> */}
                               <Button
                                 size="sm"
                                 variant="default"

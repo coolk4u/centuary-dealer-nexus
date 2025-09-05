@@ -11,7 +11,7 @@ import Cart from "./pages/Cart";
 import OrderHistory from "./pages/OrderHistory";
 import OrderDetails from "./pages/OrderDetails";
 import Inventory from "./pages/Inventory";
-import GRN from "./pages/GRN";
+import Grn from "./pages/GRN";
 import Sales from "./pages/Sales";
 import PriceList from "./pages/PriceList";
 import Targets from "./pages/Targets";
@@ -24,7 +24,7 @@ import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import DashboardLayout from "./components/DashboardLayout";
 import NotFound from "./pages/NotFound";
-import FetchData from "./fetchdata";
+// import FetchData from "./fetchdata";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +34,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-      <FetchData />
+      {/* <FetchData /> */}
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<DashboardLayout />}>
@@ -44,7 +44,7 @@ const App = () => (
             <Route path="orders" element={<OrderHistory />} />
             <Route path="orders/:id" element={<OrderDetails />} />
             <Route path="inventory" element={<Inventory />} />
-            <Route path="grn" element={<GRN />} />
+            <Route path="grn" element={<Grn />} />
             <Route path="sales" element={<Sales />} />
             <Route path="price-list" element={<PriceList />} />
             <Route path="targets" element={<Targets />} />
