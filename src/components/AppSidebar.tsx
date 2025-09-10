@@ -28,6 +28,7 @@ import {
   Percent,
   Warehouse
 } from "lucide-react";
+import logo from './Logo.jpeg'
 
 const navigationItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -38,7 +39,7 @@ const navigationItems = [
   { title: "GRN Process", url: "/grn", icon: Truck },
   { title: "Inventory", url: "/inventory", icon: Warehouse },
   { title: "Warranty Registration", url: "/warranty", icon: Shield },
-  { title: "Sales & Billing", url: "/sales", icon: BarChart3 },
+  // { title: "Sales & Billing", url: "/sales", icon: BarChart3 },
   { title: "Price List", url: "/price-list", icon: FileText },
   { title: "Targets", url: "/targets", icon: Target },
   { title: "Discounts", url: "/discounts", icon: Percent },
@@ -64,7 +65,7 @@ export function AppSidebar() {
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-            <Package className="w-5 h-5 text-white" />
+            <img src= {logo} alt="" />
           </div>
           {!collapsed && (
             <div>

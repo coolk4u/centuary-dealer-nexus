@@ -12,19 +12,19 @@ import { toast } from "sonner";
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
-    companyName: "ABC Distributors Pvt Ltd",
-    contactPerson: "Rajesh Kumar",
-    email: "rajesh@abcdistributors.com",
-    phone: "+91 98765 43210",
+    companyName: "Centuary Distributer",
+    contactPerson: "Mr. Bhaskar Achar",
+    email: "bhaskar@gmail.com",
+    phone: "+91 9346323456",
     gstNumber: "27ABCDE1234F1Z5",
-    panNumber: "ABCDE1234F",
-    aadharNumber: "1234 5678 9012",
-    address: "123 Business District, Mumbai, Maharashtra 400001",
+    panNumber: "CXEPG1234F",
+    aadharNumber: "**** **** 9012",
+    address: "2nd Floor, Plot No. 45, Hitech City Road, Kavuri Hills, Madhapur, Hyderabad, Telangana - 500081",
     bankName: "State Bank of India",
     accountNumber: "1234567890",
     ifscCode: "SBIN0001234",
     dealerCode: "DLR-MUM-001",
-    territory: "Mumbai West",
+    territory: "Hyderabad",
     joiningDate: "2020-01-15"
   });
 
