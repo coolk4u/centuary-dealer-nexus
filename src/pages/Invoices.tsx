@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,90 +17,65 @@ interface InvoiceRecord {
   Invoice_Amount__c: number;
 }
 
+// Dummy invoice data
+const DUMMY_INVOICES: InvoiceRecord[] = [
+  {
+    Id: "1",
+    Name: "INV-001",
+    Order__r: { OrderNumber: "ORD-1001" },
+    Type__c: "Standard",
+    Status__c: "Paid",
+    Invoice_Amount__c: 12500
+  },
+  {
+    Id: "2",
+    Name: "INV-002",
+    Order__r: { OrderNumber: "ORD-1002" },
+    Type__c: "Recurring",
+    Status__c: "Pending",
+    Invoice_Amount__c: 8500
+  },
+  {
+    Id: "3",
+    Name: "INV-003",
+    Order__r: { OrderNumber: "ORD-1003" },
+    Type__c: "Credit",
+    Status__c: "Overdue",
+    Invoice_Amount__c: 15600
+  },
+  {
+    Id: "4",
+    Name: "INV-004",
+    Order__r: { OrderNumber: "ORD-1004" },
+    Type__c: "Standard",
+    Status__c: "Paid",
+    Invoice_Amount__c: 9200
+  },
+  {
+    Id: "5",
+    Name: "INV-005",
+    Order__r: { OrderNumber: "ORD-1005" },
+    Type__c: "Recurring",
+    Status__c: "Pending",
+    Invoice_Amount__c: 11300
+  }
+];
+
 const Invoices = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Step 1: Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      console.log("✅ Access Token:", response.data.access_token);
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-
-      console.error("❌ Error fetching access token:", errorMessage);
-      setError("Failed to fetch access token.");
-      setLoading(false);
-    }
-  };
-
-  // Step 2: Fetch Invoices from Salesforce
-  const fetchInvoices = async () => {
-    if (!accessToken) return;
-
-    try {
-      const query = `SELECT Id, Name, Order__r.OrderNumber, Type__c, Status__c, Invoice_Amount__c FROM Invoice__c WHERE Account__r.Name = 'Centuary Distributer Account'`;
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const records: InvoiceRecord[] = response.data.records;
-
-      if (records && records.length > 0) {
-        console.log("📦 Fetched Invoices:", records);
-        setInvoices(records);
-      } else {
-        console.log("ℹ️ No invoice records found.");
-        setInvoices([]);
-      }
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-
-      console.error("❌ Error fetching data:", errorMessage);
-      setError("Failed to fetch data from Salesforce.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Load dummy data
   useEffect(() => {
-    getAccessToken();
+    // Simulate API call delay
+    const timer = setTimeout(() => {
+      setInvoices(DUMMY_INVOICES);
+      setLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (accessToken) {
-      fetchInvoices();
-    }
-  }, [accessToken]);
 
   const filteredInvoices = invoices.filter(invoice =>
     invoice.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,7 +99,7 @@ const Invoices = () => {
     toast.info(`Opening invoice ${invoiceId}...`);
   };
 
-  // Calculate totals from actual Salesforce data
+  // Calculate totals from dummy data
   const totalInvoiced = invoices.reduce((sum, invoice) => sum + (invoice.Invoice_Amount__c || 0), 0);
   const paidAmount = invoices
     .filter(invoice => invoice.Status__c === "Paid")
@@ -141,14 +115,6 @@ const Invoices = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-600">Loading invoices...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-600">Error: {error}</div>
       </div>
     );
   }
