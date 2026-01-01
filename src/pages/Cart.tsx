@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,47 +25,43 @@ const Cart = () => {
   const [paymentTerms, setPaymentTerms] = useState("");
   const [deliveryMode, setDeliveryMode] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const navigate = useNavigate();
 
+  // Dummy customer data
   const customers = [
-    { id: "CUS-001", name: "Standard Trading Company", location: "Jubilee Hills, Hyderabad", salesforceId: "001fn000005dW2HAAU" },
-    // { id: "CUS-002", name: "Sleepwell Showroom", location: "Banjara Hills, Hyderabad", salesforceId: "001fn000005QtEEAA0" },
-    { id: "CUS-003", name: "Anu Furniture", location: "Kokapet, Hyderabad", salesforceId: "001fn000005eEfkAAE" },
-    { id: "CUS-004", name: "The Comfort Korner", location: "Kondapur, Hyderabad", salesforceId: "001fn000005dnnmAAA" }
+    { id: "CUS-001", name: "Standard Trading Company", location: "Jubilee Hills, Hyderabad" },
+    { id: "CUS-002", name: "Sleepwell Showroom", location: "Banjara Hills, Hyderabad" },
+    { id: "CUS-003", name: "Anu Furniture", location: "Kokapet, Hyderabad" },
+    { id: "CUS-004", name: "The Comfort Korner", location: "Kondapur, Hyderabad" }
   ];
 
-  // Step 1: Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      return response.data.access_token;
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.message || err.message 
-        : "Unknown error occurred";
-      
-      console.error("❌ Error fetching access token:", errorMessage);
-      toast.error("Failed to authenticate with Salesforce");
-      return null;
+  // Dummy orders data for localStorage
+  const dummyOrders = [
+    {
+      id: "ORD-001",
+      customerId: "CUS-001",
+      customerName: "Standard Trading Company",
+      date: "2024-01-15",
+      total: 125000,
+      status: "Delivered",
+      items: [
+        { id: "PROD-001", name: "Premium Mattress", quantity: 2, price: 45000 },
+        { id: "PROD-003", name: "Memory Foam Pillow", quantity: 4, price: 2500 }
+      ]
+    },
+    {
+      id: "ORD-002",
+      customerId: "CUS-002",
+      customerName: "Sleepwell Showroom",
+      date: "2024-01-18",
+      total: 89000,
+      status: "Processing",
+      items: [
+        { id: "PROD-002", name: "Luxury Bed Frame", quantity: 1, price: 89000 }
+      ]
     }
-  };
+  ];
 
   // Load cart from localStorage on component mount
   useEffect(() => {
@@ -146,64 +141,55 @@ const Cart = () => {
     setIsPlacingOrder(true);
     
     try {
-      // Get access token if not already available
-      let token = accessToken;
-      if (!token) {
-        token = await getAccessToken();
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (!token) {
-        throw new Error("Failed to authenticate with Salesforce");
-      }
-      
-      // Find the selected customer's Salesforce ID
+      // Find the selected customer
       const customer = customers.find(c => c.id === selectedCustomer);
       if (!customer) {
         throw new Error("Selected customer not found");
       }
       
-      // Prepare order data for Salesforce
-      const orderData = {
-        accountId: customer.salesforceId,
+      // Create new order with dummy data
+      const newOrder = {
+        id: `ORD-${Date.now()}`,
+        customerId: selectedCustomer,
+        customerName: customer.name,
+        date: new Date().toISOString().split('T')[0],
+        total: calculateTotal(),
+        status: "Processing",
         paymentTerms: paymentTerms,
         deliveryMode: deliveryMode,
-        orderItems: cartItems.map(item => ({
-          productId: item.id,
+        items: cartItems.map(item => ({
+          id: item.id,
+          name: item.name,
           quantity: item.quantity,
-          unitPrice: item.price,
+          price: item.price,
           discount: item.discount
         }))
       };
       
-      // Call Salesforce REST API to create order
-      const response = await axios.post(
-        'https://centuaryindia-dev-ed.develop.my.salesforce.com/services/apexrest/createOrder',
-        orderData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Save order to localStorage (simulating database)
+      const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+      existingOrders.push(newOrder);
+      localStorage.setItem('orders', JSON.stringify(existingOrders));
       
-      if (response.data.success) {
-        toast.success(`Order created successfully!`);
-        setCartItems([]);
-        localStorage.removeItem('cartItems');
-        
-        // Reset form
-        setSelectedCustomer("");
-        setPaymentTerms("");
-        setDeliveryMode("");
-      } else {
-        throw new Error(response.data.message || "Failed to create order");
-      }
+      toast.success(`Order #${newOrder.id} created successfully!`);
+      
+      // Clear cart
+      setCartItems([]);
+      localStorage.removeItem('cartItems');
+      
+      // Reset form
+      setSelectedCustomer("");
+      setPaymentTerms("");
+      setDeliveryMode("");
+      
       navigate('/orders');
       
     } catch (error: any) {
       console.error("Error creating order:", error);
-      toast.error(error.response?.data?.message || error.message || "Failed to create order");
+      toast.error(error.message || "Failed to create order");
     } finally {
       setIsPlacingOrder(false);
     }
