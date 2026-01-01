@@ -1,96 +1,140 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, Package, TrendingDown, TrendingUp } from "lucide-react";
 
 interface InventoryRecord {
-  Id: string;
-  Name: string;
-  Product__r: {
-    Name: string;
-  };
-  Category__c: string;
-  Current_Stock__c: number;
-  Status__c: string;
-  Minimum_Stock__c: number;
-  Unit_Price__c: number;
-  Inventory_Value__c: number;
+  id: string;
+  name: string;
+  productName: string;
+  category: string;
+  currentStock: number;
+  status: string;
+  minimumStock: number;
+  unitPrice: number;
+  inventoryValue: number;
 }
 
 const Inventory = () => {
   const [inventoryItems, setInventoryItems] = useState<InventoryRecord[]>([]);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1: Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-      console.error("❌ Error fetching access token:", errorMessage);
-      setError("Failed to fetch access token.");
+  // Dummy inventory data
+  const dummyInventoryData: InventoryRecord[] = [
+    {
+      id: "1",
+      name: "PVC Pipe 4-inch",
+      productName: "PVC Pipe 4-inch",
+      category: "Pipes",
+      currentStock: 150,
+      status: "Good",
+      minimumStock: 50,
+      unitPrice: 120.75,
+      inventoryValue: 18112.5
+    },
+    {
+      id: "2",
+      name: "CPVC Pipe 2-inch",
+      productName: "CPVC Pipe 2-inch",
+      category: "Pipes",
+      currentStock: 25,
+      status: "Low Stock",
+      minimumStock: 30,
+      unitPrice: 95.50,
+      inventoryValue: 2387.5
+    },
+    {
+      id: "3",
+      name: "UPVC Elbow 90°",
+      productName: "UPVC Elbow 90°",
+      category: "Fittings",
+      currentStock: 300,
+      status: "Good",
+      minimumStock: 100,
+      unitPrice: 15.25,
+      inventoryValue: 4575
+    },
+    {
+      id: "4",
+      name: "PVC Tee Joint",
+      productName: "PVC Tee Joint",
+      category: "Fittings",
+      currentStock: 80,
+      status: "Good",
+      minimumStock: 40,
+      unitPrice: 22.00,
+      inventoryValue: 1760
+    },
+    {
+      id: "5",
+      name: "PVC Adhesive 1L",
+      productName: "PVC Adhesive 1L",
+      category: "Chemicals",
+      currentStock: 12,
+      status: "Low Stock",
+      minimumStock: 20,
+      unitPrice: 180.00,
+      inventoryValue: 2160
+    },
+    {
+      id: "6",
+      name: "PVC Solvent Cement",
+      productName: "PVC Solvent Cement",
+      category: "Chemicals",
+      currentStock: 45,
+      status: "Good",
+      minimumStock: 25,
+      unitPrice: 150.50,
+      inventoryValue: 6772.5
+    },
+    {
+      id: "7",
+      name: "PVC Coupling",
+      productName: "PVC Coupling",
+      category: "Fittings",
+      currentStock: 200,
+      status: "Good",
+      minimumStock: 75,
+      unitPrice: 8.75,
+      inventoryValue: 1750
+    },
+    {
+      id: "8",
+      name: "CPVC Valve",
+      productName: "CPVC Valve",
+      category: "Valves",
+      currentStock: 18,
+      status: "Low Stock",
+      minimumStock: 25,
+      unitPrice: 350.00,
+      inventoryValue: 6300
     }
-  };
+  ];
 
-  // Step 2: Fetch Inventory Data
+  // Simulate API call to fetch inventory data
   const fetchInventoryData = async () => {
-    if (!accessToken) return;
-
     try {
-      const query = `SELECT Id, Name, Product__r.Name, Category__c, Current_Stock__c, Status__c, Minimum_Stock__c, Unit_Price__c, Inventory_Value__c FROM Inventory__c where Distributor_Name__r.Name = 'Centuary Distributer Account'`;
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const records: InventoryRecord[] = response.data.records;
-      setInventoryItems(records);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // In a real application, you would fetch from your backend API:
+      // const response = await axios.get('/api/inventory');
+      // setInventoryItems(response.data);
+      
+      setInventoryItems(dummyInventoryData);
       setLoading(false);
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-      console.error("❌ Error fetching data:", errorMessage);
-      setError("Failed to fetch data from Salesforce.");
+    } catch (err) {
+      setError("Failed to fetch inventory data. Please try again.");
       setLoading(false);
+      console.error("Error fetching inventory data:", err);
     }
   };
 
   useEffect(() => {
-    getAccessToken();
+    fetchInventoryData();
   }, []);
-
-  useEffect(() => {
-    if (accessToken) {
-      fetchInventoryData();
-    }
-  }, [accessToken]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -101,15 +145,16 @@ const Inventory = () => {
     }
   };
 
-  const getStockLevel = (closing: number, reorderLevel: number) => {
-    return (closing / (reorderLevel * 3)) * 100;
+  const getStockLevel = (currentStock: number, minimumStock: number) => {
+    return (currentStock / (minimumStock * 3)) * 100;
   };
 
   // Calculate summary statistics
-  const totalItems = inventoryItems.reduce((sum, item) => sum + (item.Current_Stock__c || 0), 0);
+  const totalItems = inventoryItems.reduce((sum, item) => sum + item.currentStock, 0);
   const lowStockItems = inventoryItems.filter(item => 
-    item.Status__c === "Low Stock" || (item.Current_Stock__c || 0) <= (item.Minimum_Stock__c || 0)
+    item.status === "Low Stock" || item.currentStock <= item.minimumStock
   ).length;
+  const totalInventoryValue = inventoryItems.reduce((sum, item) => sum + item.inventoryValue, 0);
 
   if (loading) {
     return (
@@ -164,7 +209,12 @@ const Inventory = () => {
               <TrendingDown className="h-8 w-8 text-red-600" />
               <div>
                 <div className="text-2xl font-bold">
-                  {inventoryItems.reduce((sum, item) => sum + (item.Inventory_Value__c || 0), 0).toFixed(2)}
+                  {totalInventoryValue.toLocaleString('en-IN', {
+                    style: 'currency',
+                    currency: 'INR',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  })}
                 </div>
                 <p className="text-sm text-gray-600">Inventory Value</p>
               </div>
@@ -187,43 +237,49 @@ const Inventory = () => {
       {/* Inventory Items */}
       <div className="space-y-4">
         {inventoryItems.map((item) => (
-          <Card key={item.Id}>
+          <Card key={item.id}>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-center">
                 <div className="lg:col-span-2">
-                  <h3 className="font-semibold">{item.Product__r?.Name || item.Name}</h3>
-                  <p className="text-sm text-gray-600">{item.Category__c}</p>
-                  <Badge variant={getStatusColor(item.Status__c)} className="mt-1">
-                    {item.Status__c}
+                  <h3 className="font-semibold">{item.productName || item.name}</h3>
+                  <p className="text-sm text-gray-600">{item.category}</p>
+                  <Badge variant={getStatusColor(item.status)} className="mt-1">
+                    {item.status}
                   </Badge>
                 </div>
                 
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Unit Price</p>
-                  <p className="font-bold">₹{item.Unit_Price__c?.toFixed(2)}</p>
+                  <p className="font-bold">
+                    {item.unitPrice.toLocaleString('en-IN', {
+                      style: 'currency',
+                      currency: 'INR',
+                      minimumFractionDigits: 2
+                    })}
+                  </p>
                 </div>
                 
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Min Stock</p>
-                  <p className="font-bold">{item.Minimum_Stock__c}</p>
+                  <p className="font-bold">{item.minimumStock}</p>
                 </div>
                 
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Current Stock</p>
-                  <p className="font-bold">{item.Current_Stock__c}</p>
+                  <p className="font-bold">{item.currentStock}</p>
                 </div>
                 
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <p className="text-sm text-gray-600">Stock Level</p>
-                    <p className="font-bold">{item.Current_Stock__c}</p>
+                    <p className="font-bold">{item.currentStock}</p>
                   </div>
                   <Progress 
-                    value={getStockLevel(item.Current_Stock__c || 0, item.Minimum_Stock__c || 1)} 
+                    value={getStockLevel(item.currentStock, item.minimumStock || 1)} 
                     className="h-2"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Reorder at {item.Minimum_Stock__c}
+                    Reorder at {item.minimumStock}
                   </p>
                 </div>
               </div>
