@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,153 +9,154 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 interface OrderItem {
-  Id: string;
-  Product2: {
-    Name: string;
-  };
-  Quantity: number;
-  UnitPrice: number;
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
 }
 
-interface OrderRecord {
-  Id: string;
-  OrderNumber: string;
-  Account: {
-    Name: string;
-    Phone: string;
-  };
-  CreatedDate: string;
-  Status: string;
-  TotalAmount: number;
-  OrderItems: {
-    records: OrderItem[];
-  };
+interface Order {
+  id: string;
+  orderNumber: string;
+  customer: string;
+  customerPhone: string;
+  date: string;
+  status: string;
+  total: number;
+  items: OrderItem[];
 }
+
+// Dummy order data
+const DUMMY_ORDERS: Order[] = [
+  {
+    id: "1",
+    orderNumber: "ORD-2024-001",
+    customer: "John Smith",
+    customerPhone: "+1 (555) 123-4567",
+    date: "2024-01-15",
+    status: "Delivered",
+    total: 12500,
+    items: [
+      { id: "1", name: "Premium Laptop", quantity: 1, price: 85000 },
+      { id: "2", name: "Wireless Mouse", quantity: 2, price: 2500 },
+      { id: "3", name: "Laptop Bag", quantity: 1, price: 3000 }
+    ]
+  },
+  {
+    id: "2",
+    orderNumber: "ORD-2024-002",
+    customer: "Emma Johnson",
+    customerPhone: "+1 (555) 987-6543",
+    date: "2024-01-16",
+    status: "Processing",
+    total: 72000,
+    items: [
+      { id: "4", name: "Smartphone", quantity: 1, price: 65000 },
+      { id: "5", name: "Screen Protector", quantity: 2, price: 1500 },
+      { id: "6", name: "Phone Case", quantity: 1, price: 2000 }
+    ]
+  },
+  {
+    id: "3",
+    orderNumber: "ORD-2024-003",
+    customer: "Robert Williams",
+    customerPhone: "+1 (555) 456-7890",
+    date: "2024-01-17",
+    status: "Dispatched",
+    total: 45000,
+    items: [
+      { id: "7", name: "Tablet", quantity: 1, price: 35000 },
+      { id: "8", name: "Stylus Pen", quantity: 1, price: 5000 },
+      { id: "9", name: "Tablet Cover", quantity: 1, price: 5000 }
+    ]
+  }
+];
 
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1: Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      return response.data.access_token;
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.message || err.message 
-        : "Unknown error occurred";
-      
-      console.error("❌ Error fetching access token:", errorMessage);
-      setError("Failed to fetch access token.");
-      return null;
-    }
-  };
-
-  const fetchOrderDetails = async (token: string) => {
-    try {
-      // Query to fetch specific order with all details
-      const query = `SELECT 
-        Id, 
-        OrderNumber, 
-        Account.Name, 
-        Account.Phone,
-        CreatedDate, 
-        Status, 
-        TotalAmount,
-        (SELECT Id, Product2.Name, Quantity, UnitPrice FROM OrderItems) 
-      FROM Order 
-      WHERE Id = '${id}'`;
-
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const records: OrderRecord[] = response.data.records;
-
-      if (records && records.length > 0) {
-        const orderRecord = records[0];
-        console.log("📦 Fetched Order Details:", orderRecord);
-        
-        // Map Salesforce data to the order format needed by the component
-        const mappedOrder = {
-          id: orderRecord.OrderNumber,
-          customer: orderRecord.Account?.Name || 'N/A',
-          customerPhone: orderRecord.Account?.Phone || 'N/A',
-          date: new Date(orderRecord.CreatedDate).toLocaleDateString(),
-          status: orderRecord.Status,
-          total: orderRecord.TotalAmount || 0,
-          items: orderRecord.OrderItems?.records?.map(item => ({
-            id: item.Id,
-            name: item.Product2?.Name || 'Unknown Product',
-            quantity: item.Quantity,
-            price: item.UnitPrice
-          })) || []
-        };
-        
-        setOrder(mappedOrder);
-      } else {
-        console.log("ℹ️ Order not found.");
-        setError("Order not found.");
-      }
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.message || err.message 
-        : "Unknown error occurred";
-      
-      console.error("❌ Error fetching order details:", errorMessage);
-      setError("Failed to fetch order details from Salesforce.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    const initializeData = async () => {
-      const token = await getAccessToken();
-      if (token) {
-        await fetchOrderDetails(token);
-      }
+    // Simulate API call delay
+    const fetchOrderDetails = () => {
+      setLoading(true);
+      setTimeout(() => {
+        const foundOrder = DUMMY_ORDERS.find(order => order.id === id);
+        if (foundOrder) {
+          // Format the date for display
+          const formattedOrder = {
+            ...foundOrder,
+            date: new Date(foundOrder.date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })
+          };
+          setOrder(formattedOrder);
+        } else {
+          setError("Order not found.");
+        }
+        setLoading(false);
+      }, 500); // Simulate network delay
     };
-    
-    initializeData();
+
+    fetchOrderDetails();
   }, [id]);
 
   const generateInvoice = () => {
     toast.success("E-Invoice generated successfully!");
+    // In a real app, you would generate and download the invoice
+    console.log(`Generating invoice for order ${order?.orderNumber}`);
   };
 
   const generateEWayBill = () => {
     toast.success("E-Way Bill generated successfully!");
+    // In a real app, you would generate and download the e-way bill
+    console.log(`Generating e-way bill for order ${order?.orderNumber}`);
   };
 
   const generateTallyXML = () => {
     toast.success("Tally XML file generated and downloaded!");
+    // In a real app, you would generate and download the Tally XML
+    console.log(`Generating Tally XML for order ${order?.orderNumber}`);
+    
+    // Simulate file download
+    const xmlContent = `<?xml version="1.0"?>
+<ENVELOPE>
+  <HEADER>
+    <TALLYREQUEST>Import Data</TALLYREQUEST>
+  </HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>Vouchers</REPORTNAME>
+      </REQUESTDESC>
+      <REQUESTDATA>
+        <TALLYMESSAGE>
+          <ORDER>
+            <ORDERNUMBER>${order?.orderNumber}</ORDERNUMBER>
+            <DATE>${order?.date}</DATE>
+            <CUSTOMER>${order?.customer}</CUSTOMER>
+            <TOTAL>${order?.total}</TOTAL>
+          </ORDER>
+        </TALLYMESSAGE>
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>`;
+    
+    const blob = new Blob([xmlContent], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `order_${order?.orderNumber}_tally.xml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const getStatusColor = (status: string) => {
@@ -206,6 +206,7 @@ const OrderDetails = () => {
 
   // Calculate GST (20% of total)
   const gst = order.total * 0.20;
+  const subtotal = order.total - gst;
 
   return (
     <div className="space-y-6">
@@ -217,7 +218,7 @@ const OrderDetails = () => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Order Details</h1>
-            <p className="text-gray-600">Order {order.id}</p>
+            <p className="text-gray-600">Order {order.orderNumber}</p>
           </div>
         </div>
         <Badge variant={getStatusColor(order.status)}>
@@ -236,7 +237,7 @@ const OrderDetails = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium">Order ID</p>
-                  <p className="text-sm text-gray-600">{order.id}</p>
+                  <p className="text-sm text-gray-600">{order.orderNumber}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">Order Date</p>
@@ -260,7 +261,7 @@ const OrderDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.items.map((item: any) => (
+                {order.items.map((item) => (
                   <div key={item.id} className="flex justify-between items-center p-4 border rounded-lg">
                     <div>
                       <h4 className="font-medium">{item.name}</h4>
@@ -317,7 +318,7 @@ const OrderDetails = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>₹{(order.total - gst).toLocaleString()}</span>
+                <span>₹{subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span>GST (20%)</span>
