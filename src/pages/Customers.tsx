@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,58 +9,92 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, Edit, MapPin, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
 
-interface AccountRecord {
-  Id: string;
-  Name: string;
-  Rating: string;
-  BillingCity: string;
-  ShippingCity: string;
-  LastModifiedDate: string;
-  Contacts?: {
-    records: Array<{
-      Phone?: string;
-      Email?: string;
-    }>;
-  };
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  location: string;
+  billingAddress: string;
+  shippingAddress: string;
+  lastOrderDate: string;
+  status: string;
 }
 
+const dummyCustomers: Customer[] = [
+  {
+    id: "1",
+    name: "Global Retail Solutions",
+    phone: "+1 (555) 123-4567",
+    email: "contact@globalretail.com",
+    location: "New York, NY",
+    billingAddress: "123 Broadway, Suite 100, New York, NY 10001",
+    shippingAddress: "456 Warehouse Ave, Brooklyn, NY 11201",
+    lastOrderDate: "2024-01-15T10:30:00Z",
+    status: "Active"
+  },
+  {
+    id: "2",
+    name: "Premium Distributors Inc",
+    phone: "+1 (555) 234-5678",
+    email: "sales@premiumdist.com",
+    location: "Chicago, IL",
+    billingAddress: "789 Michigan Ave, Chicago, IL 60611",
+    shippingAddress: "321 Industrial Park, Chicago, IL 60609",
+    lastOrderDate: "2024-01-10T14:20:00Z",
+    status: "Active"
+  },
+  {
+    id: "3",
+    name: "Value Mart Stores",
+    phone: "+1 (555) 345-6789",
+    email: "orders@valuemart.com",
+    location: "Los Angeles, CA",
+    billingAddress: "101 Sunset Blvd, Los Angeles, CA 90046",
+    shippingAddress: "202 Commerce St, Los Angeles, CA 90021",
+    lastOrderDate: "2024-01-05T09:15:00Z",
+    status: "Inactive"
+  },
+  {
+    id: "4",
+    name: "Metro Wholesale Group",
+    phone: "+1 (555) 456-7890",
+    email: "info@metrowholesale.com",
+    location: "Miami, FL",
+    billingAddress: "303 Ocean Dr, Miami, FL 33139",
+    shippingAddress: "404 Port Ave, Miami, FL 33132",
+    lastOrderDate: "2023-12-28T16:45:00Z",
+    status: "Active"
+  },
+  {
+    id: "5",
+    name: "Northwest Retail Chain",
+    phone: "+1 (555) 567-8901",
+    email: "support@nwretail.com",
+    location: "Seattle, WA",
+    billingAddress: "505 Pike St, Seattle, WA 98101",
+    shippingAddress: "606 Harbor Way, Seattle, WA 98121",
+    lastOrderDate: "2023-12-20T11:10:00Z",
+    status: "Active"
+  },
+  {
+    id: "6",
+    name: "Heritage Department Stores",
+    phone: "+1 (555) 678-9012",
+    email: "customerservice@heritage.com",
+    location: "Boston, MA",
+    billingAddress: "707 Beacon St, Boston, MA 02215",
+    shippingAddress: "808 Cambridge St, Boston, MA 02134",
+    lastOrderDate: "2023-12-15T13:25:00Z",
+    status: "Pending"
+  }
+];
+
 const Customers = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [editForm, setEditForm] = useState<any>({});
-
-  // Step 1: Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      console.log("✅ Access Token:", response.data.access_token);
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.message || err.message 
-        : "Unknown error occurred";
-      
-      console.error("❌ Error fetching access token:", errorMessage);
-      setError("Failed to fetch access token.");
-    }
-  };
+  const [customers, setCustomers] = useState<Customer[]>(dummyCustomers);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Customer>>({});
 
   // Function to format date to show only the date part
   const formatDate = (dateString: string) => {
@@ -69,97 +102,38 @@ const Customers = () => {
     
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString(); // Formats to local date format (e.g., "9/1/2025")
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Invalid Date";
     }
   };
 
-  useEffect(() => {
-    getAccessToken();
-  }, []);
-
-  useEffect(() => {
-    if (!accessToken) return;
-
-    const fetchData = async () => {
-      try {
-        const query = `SELECT Id, Name, Rating, BillingCity, ShippingCity, LastModifiedDate,
-       (SELECT Phone, Email FROM Contacts WHERE Phone != null OR Email != null)
-FROM Account 
-WHERE Owner.Name = 'Piyush P'
-`;
-        const encodedQuery = encodeURIComponent(query);
-        const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-        const response = await axios.get(queryUrl, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        const records: AccountRecord[] = response.data.records;
-
-        if (records && records.length > 0) {
-          console.log("📦 Fetched Accounts:", records);
-          
-          // Map the Salesforce data to the customer format
-          const mappedCustomers = records.map(account => ({
-            id: account.Id,
-            name: account.Name,
-            phone: account.Contacts?.records[0]?.Phone || "N/A",
-            email: account.Contacts?.records[0]?.Email || "N/A",
-            location: account.BillingCity || "N/A",
-            billingAddress: account.BillingCity || "N/A",
-            shippingAddress: account.ShippingCity || "N/A",
-            lastOrderDate: account.LastModifiedDate || "N/A",
-            status: account.Rating || "N/A"
-          }));
-          
-          setCustomers(mappedCustomers);
-        } else {
-          console.log("ℹ️ No account records found.");
-        }
-      } catch (err: unknown) {
-        const errorMessage = axios.isAxiosError(err) 
-          ? err.response?.data?.message || err.message 
-          : "Unknown error occurred";
-        
-        console.error("❌ Error fetching data:", errorMessage);
-        setError("Failed to fetch data from Salesforce.");
-      }
-    };
-
-    fetchData();
-  }, [accessToken]);
-
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.location.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEditCustomer = (customer: any) => {
+  const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     setEditForm({ ...customer });
   };
 
   const saveCustomer = () => {
+    if (!editForm.id) return;
+    
     setCustomers(customers.map(customer =>
-      customer.id === editForm.id ? editForm : customer
+      customer.id === editForm.id ? { ...customer, ...editForm } as Customer : customer
     ));
     toast.success("Customer updated successfully!");
     setSelectedCustomer(null);
+    setEditForm({});
   };
-
-  if (error) {
-    return <div className="p-6 text-red-500">Error: {error}</div>;
-  }
-
-  if (customers.length === 0) {
-    return <div className="p-6">Loading customers...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -172,7 +146,7 @@ WHERE Owner.Name = 'Piyush P'
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="Search customers..."
+          placeholder="Search customers by name, location, or email..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -182,34 +156,40 @@ WHERE Owner.Name = 'Piyush P'
       {/* Customer Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCustomers.map((customer) => (
-          <Card key={customer.id}>
+          <Card key={customer.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">{customer.name}</CardTitle>
+                  <p className="text-sm text-gray-500">{customer.location}</p>
                 </div>
-                <Badge variant={customer.status === "Active" ? "default" : "secondary"}>
+                <Badge 
+                  variant={
+                    customer.status === "Active" ? "default" :
+                    customer.status === "Inactive" ? "destructive" : "secondary"
+                  }
+                >
                   {customer.status}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
-                <MapPin className="h-4 w-4 text-gray-400" />
-                <span>{customer.location}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
                 <Phone className="h-4 w-4 text-gray-400" />
                 <span>{customer.phone}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="h-4 w-4 text-gray-400" />
-                <span>{customer.email}</span>
+                <span className="truncate">{customer.email}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="h-4 w-4 text-gray-400" />
+                <span className="truncate">{customer.billingAddress}</span>
               </div>
               
               <div className="pt-3 border-t">
                 <div className="flex justify-between text-sm">
-                  <span>Last Modified:</span>
+                  <span className="text-gray-600">Last Order:</span>
                   <span className="font-medium">{formatDate(customer.lastOrderDate)}</span>
                 </div>
               </div>
@@ -218,62 +198,99 @@ WHERE Owner.Name = 'Piyush P'
                 <DialogTrigger asChild>
                   <Button 
                     variant="outline" 
-                    className="w-full"
+                    className="w-full mt-2"
                     onClick={() => handleEditCustomer(customer)}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Details
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Edit Customer - {customer.name}</DialogTitle>
                   </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Customer Name</Label>
+                      <Label htmlFor="name">Customer Name</Label>
                       <Input
+                        id="name"
                         value={editForm.name || ""}
                         onChange={(e) => setEditForm({...editForm, name: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Phone</Label>
+                      <Label htmlFor="phone">Phone</Label>
                       <Input
+                        id="phone"
                         value={editForm.phone || ""}
                         onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Email</Label>
+                      <Label htmlFor="email">Email</Label>
                       <Input
+                        id="email"
+                        type="email"
                         value={editForm.email || ""}
                         onChange={(e) => setEditForm({...editForm, email: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Location</Label>
+                      <Label htmlFor="location">Location</Label>
                       <Input
+                        id="location"
                         value={editForm.location || ""}
                         onChange={(e) => setEditForm({...editForm, location: e.target.value})}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <select
+                        id="status"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={editForm.status || ""}
+                        onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Pending">Pending</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastOrderDate">Last Order Date</Label>
+                      <Input
+                        id="lastOrderDate"
+                        type="date"
+                        value={editForm.lastOrderDate ? editForm.lastOrderDate.split('T')[0] : ""}
+                        onChange={(e) => setEditForm({...editForm, lastOrderDate: e.target.value + 'T00:00:00Z'})}
+                      />
+                    </div>
                     <div className="col-span-2 space-y-2">
-                      <Label>Billing Address</Label>
+                      <Label htmlFor="billingAddress">Billing Address</Label>
                       <Textarea
+                        id="billingAddress"
                         value={editForm.billingAddress || ""}
                         onChange={(e) => setEditForm({...editForm, billingAddress: e.target.value})}
+                        rows={2}
                       />
                     </div>
                     <div className="col-span-2 space-y-2">
-                      <Label>Shipping Address</Label>
+                      <Label htmlFor="shippingAddress">Shipping Address</Label>
                       <Textarea
+                        id="shippingAddress"
                         value={editForm.shippingAddress || ""}
                         onChange={(e) => setEditForm({...editForm, shippingAddress: e.target.value})}
+                        rows={2}
                       />
                     </div>
-                    <div className="col-span-2 flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setSelectedCustomer(null)}>
+                    <div className="col-span-2 flex justify-end gap-2 pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setSelectedCustomer(null);
+                          setEditForm({});
+                        }}
+                      >
                         Cancel
                       </Button>
                       <Button onClick={saveCustomer}>
@@ -287,6 +304,19 @@ WHERE Owner.Name = 'Piyush P'
           </Card>
         ))}
       </div>
+
+      {filteredCustomers.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No customers found matching your search.</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => setSearchTerm("")}
+          >
+            Clear Search
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
