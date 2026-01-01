@@ -13,31 +13,26 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Shield, Scan, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 
 interface WarrantyRecord {
-  Id: string;
-  Name: string;
-  Customer_Name__r?: {
-    Name: string;
-  };
-  Selected_Products__r?: {
-    Name: string;
-  };
-  Product_Code__c?: string;
-  Invoice_Number__c?: string;
-  Expiry__c?: string;
-  CreatedDate?: string;
+  id: string;
+  name: string;
+  customerName: string;
+  productName: string;
+  productCode: string;
+  invoiceNumber: string;
+  expiryDate: string;
+  createdDate: string;
 }
 
 interface CustomerRecord {
-  Id: string;
-  Name: string;
+  id: string;
+  name: string;
 }
 
 interface ProductRecord {
-  Id: string;
-  Name: string;
+  id: string;
+  name: string;
 }
 
 const WarrantyRegistration = () => {
@@ -45,229 +40,131 @@ const WarrantyRegistration = () => {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [productCode, setProductCode] = useState("");
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [recentWarranties, setRecentWarranties] = useState<WarrantyRecord[]>([]);
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
+  // Dummy data for customers
+  const dummyCustomers: CustomerRecord[] = [
+    { id: "customer-1", name: "SleepWell Showroom" },
+    { id: "customer-2", name: "John Smith" },
+    { id: "customer-3", name: "Emma Johnson" },
+    { id: "customer-4", name: "Michael Williams" },
+    { id: "customer-5", name: "Sarah Brown" },
+    { id: "customer-6", name: "Robert Davis" },
+  ];
 
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
+  // Dummy data for products
+  const dummyProducts: ProductRecord[] = [
+    { id: "product-1", name: "Premium Mattress - Queen Size" },
+    { id: "product-2", name: "Memory Foam Pillow" },
+    { id: "product-3", name: "Orthopedic Mattress - King Size" },
+    { id: "product-4", name: "Gel Memory Foam Mattress" },
+    { id: "product-5", name: "Latex Pillow" },
+    { id: "product-6", name: "Yoga Mat - Premium" },
+  ];
 
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      console.log("✅ Access Token:", response.data.access_token);
-      return response.data.access_token;
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-
-      console.error("❌ Error fetching access token:", errorMessage);
-      toast.error("Failed to fetch access token.");
-      return null;
-    }
-  };
-
-  // Fetch customers from Salesforce
-  const fetchCustomers = async (token: string) => {
-    try {
-      const query = `SELECT Id, Name FROM Customer_Onboarding__c ORDER BY Name LIMIT 50`;
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      // Add SleepWell Showroom if it doesn't exist in the response
-      let customerList = response.data.records;
-      
-      // Check if SleepWell Showroom already exists
-      const sleepWellExists = customerList.some(
-        (customer: CustomerRecord) => customer.Name === "SleepWell Showroom"
-      );
-      
-      // If not found, add it to the beginning of the list
-      if (!sleepWellExists) {
-        customerList = [
-          { Id: "sleepwell-showroom", Name: "SleepWell Showroom" },
-          ...customerList
-        ];
-      }
-      
-      // Add some sample customers for demonstration if we have less than 4
-      if (customerList.length < 4) {
-        const sampleCustomers = [
-          { Id: "customer-2", Name: "John Smith" },
-          { Id: "customer-3", Name: "Emma Johnson" },
-          { Id: "customer-4", Name: "Michael Williams" }
-        ];
-        
-        // Add sample customers only if they don't already exist
-        sampleCustomers.forEach(sample => {
-          if (!customerList.some((c: CustomerRecord) => c.Name === sample.Name)) {
-            customerList.push(sample);
-          }
-        });
-      }
-
-      setCustomers(customerList);
-    } catch (err: unknown) {
-      console.error("❌ Error fetching customers:", err);
-      
-      // Fallback to sample data if API fails
-      const fallbackCustomers = [
-        { Id: "sleepwell-showroom", Name: "SleepWell Showroom" },
-        { Id: "customer-2", Name: "John Smith" },
-        { Id: "customer-3", Name: "Emma Johnson" },
-        { Id: "customer-4", Name: "Michael Williams" }
-      ];
-      setCustomers(fallbackCustomers);
-    }
-  };
-
-  // Fetch products from Salesforce
-  const fetchProducts = async (token: string) => {
-    try {
-      const query = `SELECT Id, Name FROM Product2 where Family IN ('Mattress', 'Pillow', 'Mat') and isActive = true`;
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      setProducts(response.data.records);
-    } catch (err: unknown) {
-      console.error("❌ Error fetching products:", err);
-    }
-  };
-
-  // Fetch recent warranty registrations
-  const fetchRecentWarranties = async (token: string) => {
-    try {
-      const query = `Select Id, Name, Customer_Name__r.Name, Selected_Products__r.Name, Product_Code__c, Invoice_Number__c, Expiry__c, CreatedDate From Warranty_Registration__c ORDER BY CreatedDate DESC LIMIT 10`;
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      setRecentWarranties(response.data.records);
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-
-      console.error("❌ Error fetching warranty data:", errorMessage);
-      toast.error("Failed to fetch warranty data.");
-    }
-  };
+  // Dummy data for recent warranties
+  const dummyWarranties: WarrantyRecord[] = [
+    {
+      id: "warranty-1",
+      name: "WR-001",
+      customerName: "John Smith",
+      productName: "Premium Mattress - Queen Size",
+      productCode: "MAT001-2024-001",
+      invoiceNumber: "INV-2024-001",
+      expiryDate: "2026-12-31",
+      createdDate: "2024-01-15",
+    },
+    {
+      id: "warranty-2",
+      name: "WR-002",
+      customerName: "Emma Johnson",
+      productName: "Memory Foam Pillow",
+      productCode: "PIL001-2024-002",
+      invoiceNumber: "INV-2024-002",
+      expiryDate: "2025-06-30",
+      createdDate: "2024-01-14",
+    },
+    {
+      id: "warranty-3",
+      name: "WR-003",
+      customerName: "Michael Williams",
+      productName: "Orthopedic Mattress - King Size",
+      productCode: "MAT002-2024-003",
+      invoiceNumber: "INV-2024-003",
+      expiryDate: "2024-03-15",
+      createdDate: "2024-01-13",
+    },
+    {
+      id: "warranty-4",
+      name: "WR-004",
+      customerName: "SleepWell Showroom",
+      productName: "Gel Memory Foam Mattress",
+      productCode: "MAT003-2024-004",
+      invoiceNumber: "INV-2024-004",
+      expiryDate: "2027-01-01",
+      createdDate: "2024-01-12",
+    },
+  ];
 
   useEffect(() => {
-    const initialize = async () => {
-      const token = await getAccessToken();
-      if (token) {
-        fetchCustomers(token);
-        fetchProducts(token);
-        fetchRecentWarranties(token);
-      }
-    };
-    initialize();
+    // Load dummy data
+    setCustomers(dummyCustomers);
+    setProducts(dummyProducts);
+    setRecentWarranties(dummyWarranties);
   }, []);
 
-  const registerWarranty = async () => {
+  const registerWarranty = () => {
     if (!selectedCustomer || !selectedProduct || !invoiceNumber) {
       toast.error("Please fill all required fields");
       return;
     }
 
     setLoading(true);
-    
-    try {
-      // First get an access token if we don't have one
-      let token = accessToken;
-      if (!token) {
-        token = await getAccessToken();
-        if (!token) {
-          throw new Error("Failed to get access token");
-        }
-      }
 
-      // Create the warranty registration
-      const response = await axios.post(
-        'https://centuaryindia-dev-ed.develop.my.salesforce.com/services/apexrest/WarrantyRegistration',
-        {
-          customerId: selectedCustomer,
-          productId: selectedProduct,
-          invoiceNumber: invoiceNumber,
-          productCode: productCode
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    // Simulate API call delay
+    setTimeout(() => {
+      // Find selected customer and product names
+      const customer = customers.find(c => c.id === selectedCustomer);
+      const product = products.find(p => p.id === selectedProduct);
 
-      if (response.data.includes('Success')) {
-        toast.success("Warranty registered successfully! SMS/Email confirmation sent to customer.");
-        
-        // Reset form
-        setSelectedCustomer("");
-        setSelectedProduct("");
-        setInvoiceNumber("");
-        setProductCode("");
-        
-        // Refresh the recent warranties list
-        fetchRecentWarranties(token);
-      } else {
-        throw new Error(response.data);
-      }
-    } catch (error: any) {
-      console.error('Error registering warranty:', error);
-      toast.error(`Failed to register warranty: ${error.message}`);
-    } finally {
+      // Create new warranty record
+      const newWarranty: WarrantyRecord = {
+        id: `warranty-${Date.now()}`,
+        name: `WR-${recentWarranties.length + 1}`,
+        customerName: customer?.name || "Unknown Customer",
+        productName: product?.name || "Unknown Product",
+        productCode: productCode || `CODE-${Date.now().toString().slice(-6)}`,
+        invoiceNumber: invoiceNumber,
+        expiryDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 years from now
+        createdDate: new Date().toISOString().split('T')[0],
+      };
+
+      // Add to recent warranties (at the beginning)
+      setRecentWarranties(prev => [newWarranty, ...prev.slice(0, 9)]);
+
+      // Reset form
+      setSelectedCustomer("");
+      setSelectedProduct("");
+      setInvoiceNumber("");
+      setProductCode("");
+
+      toast.success("Warranty registered successfully! SMS/Email confirmation sent to customer.");
       setLoading(false);
-    }
+    }, 1000);
   };
 
   const scanProductCode = () => {
     // Simulate scanning
-    setProductCode("MAT001-2024-003");
+    const scannedCode = `SCAN-${Date.now().toString().slice(-8)}`;
+    setProductCode(scannedCode);
     toast.info("Product code scanned successfully!");
   };
 
   // Function to determine badge variant based on expiry date
-  const getExpiryStatus = (expiryDate: string | undefined) => {
-    if (!expiryDate) return "default";
-    
+  const getExpiryStatus = (expiryDate: string) => {
     const today = new Date();
     const expiry = new Date(expiryDate);
     
@@ -281,9 +178,7 @@ const WarrantyRegistration = () => {
   };
 
   // Function to get status text based on expiry date
-  const getStatusText = (expiryDate: string | undefined) => {
-    if (!expiryDate) return "Active";
-    
+  const getStatusText = (expiryDate: string) => {
     const today = new Date();
     const expiry = new Date(expiryDate);
     
@@ -328,8 +223,8 @@ const WarrantyRegistration = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.Id} value={customer.Id}>
-                      {customer.Name}
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -347,8 +242,8 @@ const WarrantyRegistration = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
-                    <SelectItem key={product.Id} value={product.Id}>
-                      {product.Name}
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -397,26 +292,22 @@ const WarrantyRegistration = () => {
           <CardContent className="space-y-4">
             {recentWarranties.length > 0 ? (
               recentWarranties.map((warranty) => (
-                <div key={warranty.Id} className="p-4 border rounded-lg">
+                <div key={warranty.id} className="p-4 border rounded-lg">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-medium">{warranty.Selected_Products__r?.Name || 'N/A'}</h4>
-                      <p className="text-sm text-gray-600">{warranty.Customer_Name__r?.Name || 'N/A'}</p>
+                      <h4 className="font-medium">{warranty.productName}</h4>
+                      <p className="text-sm text-gray-600">{warranty.customerName}</p>
                     </div>
-                    <Badge variant={getExpiryStatus(warranty.Expiry__c)}>
+                    <Badge variant={getExpiryStatus(warranty.expiryDate)}>
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      {getStatusText(warranty.Expiry__c)}
+                      {getStatusText(warranty.expiryDate)}
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p>Code: {warranty.Product_Code__c || 'N/A'}</p>
-                    <p>Invoice: {warranty.Invoice_Number__c || 'N/A'}</p>
-                    {warranty.Expiry__c && (
-                      <p>Expires: {new Date(warranty.Expiry__c).toLocaleDateString()}</p>
-                    )}
-                    {warranty.CreatedDate && (
-                      <p>Registered: {new Date(warranty.CreatedDate).toLocaleDateString()}</p>
-                    )}
+                    <p>Code: {warranty.productCode}</p>
+                    <p>Invoice: {warranty.invoiceNumber}</p>
+                    <p>Expires: {new Date(warranty.expiryDate).toLocaleDateString()}</p>
+                    <p>Registered: {new Date(warranty.createdDate).toLocaleDateString()}</p>
                   </div>
                 </div>
               ))
