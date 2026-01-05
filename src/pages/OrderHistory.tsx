@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,136 +6,105 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Eye, Download } from "lucide-react";
 
-interface OrderRecord {
-  Id: string;
-  OrderNumber: string;
-  Account: {
-    Name: string;
-  };
-  CreatedDate: string;
-  Status: string;
-  TotalAmount: number;
-  OrderItems: {
-    records: Array<{
-      Id: string;
-    }>;
-  };
+interface Order {
+  id: string;
+  customer: string;
+  date: string;
+  amount: number;
+  status: string;
+  items: number;
+  salesforceId?: string;
 }
+
+const dummyOrders: Order[] = [
+  {
+    id: "ORD-001",
+    customer: "John Smith",
+    date: "2024-01-15",
+    amount: 12500,
+    status: "Delivered",
+    items: 3,
+  },
+  {
+    id: "ORD-002",
+    customer: "Emma Johnson",
+    date: "2024-01-14",
+    amount: 8900,
+    status: "Dispatched",
+    items: 2,
+  },
+  {
+    id: "ORD-003",
+    customer: "Michael Brown",
+    date: "2024-01-13",
+    amount: 21500,
+    status: "Processing",
+    items: 5,
+  },
+  {
+    id: "ORD-004",
+    customer: "Sarah Davis",
+    date: "2024-01-12",
+    amount: 5400,
+    status: "Cancelled",
+    items: 1,
+  },
+  {
+    id: "ORD-005",
+    customer: "Robert Wilson",
+    date: "2024-01-11",
+    amount: 18300,
+    status: "Approved",
+    items: 4,
+  },
+  {
+    id: "ORD-006",
+    customer: "Lisa Miller",
+    date: "2024-01-10",
+    amount: 7200,
+    status: "Delivered",
+    items: 2,
+  },
+  {
+    id: "ORD-007",
+    customer: "David Taylor",
+    date: "2024-01-09",
+    amount: 15600,
+    status: "Draft",
+    items: 3,
+  },
+  {
+    id: "ORD-008",
+    customer: "Jennifer Anderson",
+    date: "2024-01-08",
+    amount: 9400,
+    status: "Activated",
+    items: 2,
+  },
+];
 
 const OrderHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Step 1: Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      console.log("✅ Access Token:", response.data.access_token);
-      return response.data.access_token;
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-
-      console.error("❌ Error fetching access token:", errorMessage);
-      setError("Failed to fetch access token.");
-      return null;
-    }
-  };
-
-  const fetchOrders = async (token: string) => {
-    try {
-      // Query to fetch orders with related data
-      // We'll get the order items as a subquery and count them
-      const query = `SELECT 
-    Id, 
-    OrderNumber, 
-    Account.Name, 
-    CreatedDate, 
-    Status, 
-    TotalAmount,
-    (SELECT Id FROM OrderItems) 
-FROM Order 
-WHERE (AccountId IN ('001fn000005dW2HAAU', 
-                     '001fn000005QtEEAA0', 
-                     '001fn000005dnnmAAA'))
-  AND Type = 'Secondary'
-  AND CreatedDate = TODAY
-ORDER BY CreatedDate DESC
-LIMIT 50
-`;
-
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const records: OrderRecord[] = response.data.records;
-
-      if (records && records.length > 0) {
-        console.log("📦 Fetched Orders:", records);
-
-        // Map Salesforce data to the order format needed by the component
-        const mappedOrders = records.map((record) => ({
-          id: record.OrderNumber,
-          customer: record.Account?.Name || "N/A",
-          date: new Date(record.CreatedDate).toLocaleDateString(),
-          amount: record.TotalAmount || 0,
-          status: record.Status,
-          items: record.OrderItems?.records?.length || 0,
-          salesforceId: record.Id, // Store Salesforce ID for future reference
-        }));
-
-        setOrders(mappedOrders);
-      } else {
-        console.log("ℹ️ No order records found.");
-        setOrders([]);
-      }
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-
-      console.error("❌ Error fetching orders:", errorMessage);
-      setError("Failed to fetch orders from Salesforce.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    const initializeData = async () => {
-      const token = await getAccessToken();
-      if (token) {
-        await fetchOrders(token);
+    // Simulate API call delay
+    const timer = setTimeout(() => {
+      try {
+        // In a real app, you would fetch from your backend API here
+        setOrders(dummyOrders);
+        setLoading(false);
+      } catch (err) {
+        setError("Failed to load orders. Please try again later.");
+        setLoading(false);
+        console.error("Error loading orders:", err);
       }
-    };
+    }, 500);
 
-    initializeData();
+    return () => clearTimeout(timer);
   }, []);
 
   const filteredOrders = orders.filter(
@@ -226,7 +194,9 @@ LIMIT 50
                     </div>
                     <div className="text-sm">
                       <p className="text-gray-600">Date</p>
-                      <p className="font-medium">{order.date}</p>
+                      <p className="font-medium">
+                        {new Date(order.date).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
 
@@ -237,7 +207,7 @@ LIMIT 50
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/orders/${order.salesforceId}`)}
+                      onClick={() => navigate(`/orders/${order.id}`)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       View Details

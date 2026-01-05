@@ -23,30 +23,6 @@ import { Package, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 interface GRNRecord {
-  Id: string;
-  Name: string;
-  Order__r?: {
-    OrderNumber: string;
-  };
-  Distributor_Account__r?: {
-    Name: string;
-  };
-  GRN_Line_Items__r?: {
-    records: Array<{
-      Id: string;
-      Quantity__c: number;
-      Received__c: number;
-      Product__c: string;
-      Product__r?: {
-        Name: string;
-      };
-      Total_Amount__c: number;
-    }>;
-  };
-  GRN_Status__c: string;
-}
-
-interface ProcessedGRNRecord {
   id: string;
   grnNumber: string;
   orderNumber: string;
@@ -63,164 +39,140 @@ interface ProcessedGRNRecord {
   }>;
 }
 
+// Dummy data in JSON format
+const DUMMY_GRN_DATA: GRNRecord[] = [
+  {
+    id: "GRN001",
+    grnNumber: "GRN-2024-001",
+    orderNumber: "ORD-2024-1001",
+    supplier: "Global Electronics Inc.",
+    totalItems: 45,
+    receivedItems: 30,
+    status: "Partial",
+    products: [
+      {
+        id: "PROD001",
+        name: "Laptop Pro 16",
+        ordered: 10,
+        received: 8,
+        price: 120000,
+      },
+      {
+        id: "PROD002",
+        name: "Wireless Mouse",
+        ordered: 25,
+        received: 15,
+        price: 2500,
+      },
+      {
+        id: "PROD003",
+        name: "USB-C Hub",
+        ordered: 10,
+        received: 7,
+        price: 4500,
+      },
+    ],
+  },
+  {
+    id: "GRN002",
+    grnNumber: "GRN-2024-002",
+    orderNumber: "ORD-2024-1002",
+    supplier: "Office Supplies Co.",
+    totalItems: 120,
+    receivedItems: 120,
+    status: "Completed",
+    products: [
+      {
+        id: "PROD004",
+        name: "Desk Chair",
+        ordered: 20,
+        received: 20,
+        price: 7500,
+      },
+      {
+        id: "PROD005",
+        name: "Monitor 27-inch",
+        ordered: 15,
+        received: 15,
+        price: 18000,
+      },
+      {
+        id: "PROD006",
+        name: "Keyboard",
+        ordered: 35,
+        received: 35,
+        price: 3500,
+      },
+      {
+        id: "PROD007",
+        name: "Notebooks",
+        ordered: 50,
+        received: 50,
+        price: 250,
+      },
+    ],
+  },
+  {
+    id: "GRN003",
+    grnNumber: "GRN-2024-003",
+    orderNumber: "ORD-2024-1003",
+    supplier: "Tech Gadgets Ltd.",
+    totalItems: 75,
+    receivedItems: 0,
+    status: "Pending",
+    products: [
+      {
+        id: "PROD008",
+        name: "Smartphone X",
+        ordered: 25,
+        received: 0,
+        price: 45000,
+      },
+      {
+        id: "PROD009",
+        name: "Bluetooth Earbuds",
+        ordered: 30,
+        received: 0,
+        price: 5500,
+      },
+      {
+        id: "PROD010",
+        name: "Power Bank",
+        ordered: 20,
+        received: 0,
+        price: 3000,
+      },
+    ],
+  },
+];
+
 const GRN = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [grnRecords, setGrnRecords] = useState<ProcessedGRNRecord[]>([]);
-  const [selectedGRN, setSelectedGRN] = useState<ProcessedGRNRecord | null>(
-    null
-  );
+  const [grnRecords, setGrnRecords] = useState<GRNRecord[]>([]);
+  const [selectedGRN, setSelectedGRN] = useState<GRNRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      console.log("✅ Access Token:", response.data.access_token);
-      return response.data.access_token;
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-
-      console.error("❌ Error fetching access token:", errorMessage);
-      setError("Failed to fetch access token.");
-      setLoading(false);
-      throw new Error(errorMessage);
-    }
-  };
-
   useEffect(() => {
-    const initializeData = async () => {
+    // Simulate API call with timeout
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const token = await getAccessToken();
-        if (token) {
-          await fetchData(token);
-        }
-      } catch (error) {
-        console.error("Initialization error:", error);
-        setError("Failed to initialize application.");
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Use dummy data
+        setGrnRecords(DUMMY_GRN_DATA);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load GRN data.");
+      } finally {
         setLoading(false);
       }
     };
 
-    initializeData();
+    fetchData();
   }, []);
-
-  const fetchData = async (token: string) => {
-    try {
-      const query = `SELECT 
-    Id, 
-    Name,
-    Order__r.OrderNumber,
-    Distributor_Account__r.Name,
-    CreatedDate,
-    (SELECT Quantity__c, Received__c, Product__c, Product__r.Name, Total_Amount__c FROM GRN_Line_Items__r),
-    GRN_Status__c
-    FROM GRN__c
-    WHERE CreatedDate = LAST_N_DAYS:7
-    ORDER BY CreatedDate DESC
-    LIMIT 1000`;
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      console.log("Fetching data from:", queryUrl);
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 10000,
-      });
-
-      console.log("API Response:", response.data);
-
-      // Check if records exists and is an array
-      if (!response.data.records || !Array.isArray(response.data.records)) {
-        console.error("❌ Invalid response format - records is null or not an array");
-        setError("No GRN records found or invalid response format.");
-        setLoading(false);
-        return;
-      }
-
-      const records: GRNRecord[] = response.data.records;
-
-      if (records.length > 0) {
-        console.log("📦 Fetched GRN Records:", records);
-
-        // Transform the Salesforce data to match the UI structure
-        const processedRecords: ProcessedGRNRecord[] = records.map(
-          (record) => {
-            // Extract line items safely
-            const lineItems = record.GRN_Line_Items__r?.records || [];
-            
-            return {
-              id: record.Id, // Using Salesforce Id as the unique identifier
-              grnNumber: record.Name, // Using Name as the GRN number for display
-              orderNumber: record.Order__r?.OrderNumber || "N/A",
-              supplier: record.Distributor_Account__r?.Name || "Unknown Supplier",
-              totalItems: lineItems.reduce(
-                (sum, item) => sum + (item.Quantity__c || 0),
-                0
-              ),
-              receivedItems: lineItems.reduce(
-                (sum, item) => sum + (item.Received__c || 0),
-                0
-              ),
-              status: record.GRN_Status__c || "Pending",
-              products: lineItems.map((item) => ({
-                id: item.Id || item.Product__c,
-                name: item.Product__r?.Name || "Unknown Product",
-                ordered: item.Quantity__c || 0,
-                received: item.Received__c || 0,
-                price: item.Total_Amount__c || 0,
-              })),
-            };
-          }
-        );
-
-        console.log("📊 Processed Records:", processedRecords);
-        setGrnRecords(processedRecords);
-      } else {
-        console.log("ℹ️ No GRN records found.");
-        setError("No GRN records found for the last 7 days.");
-      }
-      setLoading(false);
-    } catch (err: unknown) {
-      console.error("❌ Full error object:", err);
-      
-      let errorMessage = "Unknown error occurred";
-      if (axios.isAxiosError(err)) {
-        errorMessage = err.response?.data?.[0]?.message || 
-                      err.response?.data?.error_description || 
-                      err.response?.statusText || 
-                      err.message;
-        console.error("❌ HTTP Status:", err.response?.status);
-        console.error("❌ Response Data:", err.response?.data);
-      }
-      
-      console.error("❌ Error fetching data:", errorMessage);
-      setError(`Failed to fetch data from Salesforce: ${errorMessage}`);
-      setLoading(false);
-    }
-  };
 
   const processGRN = (
     grnId: string,
@@ -244,7 +196,8 @@ const GRN = () => {
             products: updatedProducts,
             receivedItems: totalReceived,
             status:
-              totalReceived === record.totalItems ? "Completed" : "Partial",
+              totalReceived === record.totalItems ? "Completed" : 
+              totalReceived > 0 ? "Partial" : "Pending",
           };
         }
         return record;
@@ -254,38 +207,14 @@ const GRN = () => {
   };
 
   const updateInventoryStock = async (productId: string, receivedQty: number) => {
-    if (!accessToken) {
-      toast.error("No access token available");
-      return;
-    }
-
     try {
-      const requestBody = {
-        productId: productId,
-        receivedQuantity: receivedQty
-      };
-
-      const response = await axios.post(
-        "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/apexrest/UpdateInventoryStock",
-        requestBody,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        toast.success(`Inventory updated successfully! New stock: ${response.data.updatedStock}`);
-      } else {
-        toast.error(`Failed to update inventory: ${response.data.message}`);
-      }
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : "Unknown error occurred";
-      toast.error(`Error updating inventory: ${errorMessage}`);
+      // Simulate API call to update inventory
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast.success(`Inventory updated for product ${productId}! Quantity: ${receivedQty}`);
+    } catch (err) {
+      console.error("Error updating inventory:", err);
+      toast.error("Failed to update inventory. Please try again.");
     }
   };
 
@@ -298,14 +227,10 @@ const GRN = () => {
     setError(null);
     setLoading(true);
     try {
-      if (accessToken) {
-        await fetchData(accessToken);
-      } else {
-        const token = await getAccessToken();
-        if (token) {
-          await fetchData(token);
-        }
-      }
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setGrnRecords(DUMMY_GRN_DATA);
+      setLoading(false);
     } catch (error) {
       console.error("Retry failed:", error);
       setError("Failed to fetch data. Please try again.");
@@ -314,7 +239,14 @@ const GRN = () => {
   };
 
   if (loading) {
-    return <div className="p-4">Loading GRN data...</div>;
+    return (
+      <div className="p-4 flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+          <p>Loading GRN data...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -329,7 +261,7 @@ const GRN = () => {
   if (grnRecords.length === 0) {
     return (
       <div className="p-4">
-        <div>No GRN records found.</div>
+        <div className="text-gray-500 text-center py-8">No GRN records found.</div>
         <Button onClick={retryFetchData} className="mt-4">
           Retry
         </Button>
@@ -354,19 +286,19 @@ const GRN = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5" />
-                    {grn.grnNumber || grn.id}
+                    {grn.grnNumber}
                   </CardTitle>
                   <p className="text-sm text-gray-600">
                     Order: {grn.orderNumber}
                   </p>
                 </div>
                 <Badge
-                  variant={
+                  className={
                     grn.status === "Completed"
-                      ? "default"
+                      ? "bg-green-100 text-green-800"
                       : grn.status === "Partial"
-                      ? "secondary"
-                      : "outline"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-gray-100 text-gray-800"
                   }
                 >
                   {grn.status}
@@ -398,7 +330,7 @@ const GRN = () => {
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Process GRN - {grn.grnNumber || grn.id}</DialogTitle>
+                    <DialogTitle>Process GRN - {grn.grnNumber}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <Table>
@@ -407,13 +339,15 @@ const GRN = () => {
                           <TableHead>Product</TableHead>
                           <TableHead>Ordered Qty</TableHead>
                           <TableHead>Received Qty</TableHead>
+                          <TableHead>Unit Price</TableHead>
+                          <TableHead>Total</TableHead>
                           <TableHead>Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {grn.products.map((product) => (
                           <TableRow key={product.id}>
-                            <TableCell>{product.name}</TableCell>
+                            <TableCell className="font-medium">{product.name}</TableCell>
                             <TableCell>{product.ordered}</TableCell>
                             <TableCell>
                               <Input
@@ -421,33 +355,51 @@ const GRN = () => {
                                 min="0"
                                 max={product.ordered}
                                 defaultValue={product.received}
-                                className="w-20"
+                                className="w-24"
                                 data-product={product.id}
                                 onChange={(e) => {
                                   const qty = parseInt(e.target.value) || 0;
-                                  processGRN(grn.id, product.id, qty);
+                                  const clampedQty = Math.min(Math.max(0, qty), product.ordered);
+                                  e.target.value = clampedQty.toString();
+                                  processGRN(grn.id, product.id, clampedQty);
                                 }}
                               />
                             </TableCell>
+                            <TableCell>₹{product.price.toLocaleString()}</TableCell>
+                            <TableCell>₹{(product.received * product.price).toLocaleString()}</TableCell>
                             <TableCell>
                               <Button
                                 size="sm"
                                 variant="default"
-                                className="ml-2"
                                 onClick={() => {
-                                  const receivedInput = document.querySelector(`input[data-product="${product.id}"]`) as HTMLInputElement;
-                                  const receivedQty = receivedInput ? parseInt(receivedInput.value) || 0 : 0;
+                                  const receivedInput = document.querySelector(
+                                    `input[data-product="${product.id}"]`
+                                  ) as HTMLInputElement;
+                                  const receivedQty = receivedInput
+                                    ? parseInt(receivedInput.value) || 0
+                                    : 0;
                                   handleProcessGRN(grn.id, product.id, receivedQty);
                                 }}
                               >
                                 <Package className="h-4 w-4 mr-1" />
-                                Process GRN
+                                Update
                               </Button>
                             </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
+                    <div className="flex justify-between items-center pt-4 border-t">
+                      <div>
+                        <p className="text-sm font-medium">Total Received Items: {grn.receivedItems}</p>
+                        <p className="text-sm text-gray-600">of {grn.totalItems} total</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          Total Value: ₹{grn.products.reduce((sum, p) => sum + (p.received * p.price), 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>

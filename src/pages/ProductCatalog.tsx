@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,24 +8,15 @@ import { Search, ShoppingCart, Eye, Package, User } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-interface ProductRecord {
-  Id: string;
-  Name: string;
-  Family: string;
-  MRP__c: number;
-  Prod_Img_Url__c: string;
-  Description: string;
-  Specifications__c: string;
-  UnitPrice: number;
-  Product2: {
-    Id: string;
-    Name: string;
-    Family: string;
-    MRP__c: number;
-    Prod_Img_Url__c: string;
-    Description: string;
-    Specifications__c: string;
-  };
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  mrp: number;
+  image: string;
+  specifications: string[];
+  description: string;
 }
 
 interface CartItem {
@@ -45,19 +35,80 @@ const ProductCatalog = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
   const navigate = useNavigate();
 
-  // Mock customers data
+  // Dummy customers data
   const customers = [
     { id: "CUS-001", name: "Standard Trading Company", contactPerson: "Dinesh Kumar", location: "Jubilee Hills, Hyderabad" },
-    // { id: "CUS-002", name: "Sleepwell Showroom", contactPerson: "Rajesh K", location: "Banjara Hills, Hyderabad" },
     { id: "CUS-003", name: "Anu Furniture", contactPerson: "Satish Kumar", location: "Kokapet, Hyderabad" },
     { id: "CUS-004", name: "The Comfort Korner", contactPerson: "Bhanu Kumar", location: "Kondapur, Hyderabad"},
-    // { id: "CUS-005", name: "Dream Sleep Center", contactPerson: "Amit Patel", location: "Pune" }
+  ];
+
+  // Dummy products data in JSON format
+  const dummyProducts: Product[] = [
+    {
+      id: "PROD-001",
+      name: "Ortho Memory Foam Mattress",
+      category: "Mattress",
+      price: 12599,
+      mrp: 15999,
+      image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&auto=format&fit=crop",
+      specifications: ["Queen Size", "Memory Foam", "Orthopedic Support"],
+      description: "Premium orthopedic mattress with memory foam for optimal back support and comfort."
+    },
+    {
+      id: "PROD-002",
+      name: "Gel Memory Foam Pillow",
+      category: "Pillow",
+      price: 1299,
+      mrp: 1999,
+      image: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w-800&auto=format&fit=crop",
+      specifications: ["Gel Infused", "Breathable", "Medium Firm"],
+      description: "Cooling gel memory foam pillow that adapts to your head and neck shape."
+    },
+    {
+      id: "PROD-003",
+      name: "Yoga and Exercise Mat",
+      category: "Mat",
+      price: 899,
+      mrp: 1299,
+      image: "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w-800&auto=format&fit=crop",
+      specifications: ["Non-slip", "6mm Thick", "Eco-friendly"],
+      description: "High-density exercise mat with excellent cushioning and non-slip surface."
+    },
+    {
+      id: "PROD-004",
+      name: "Latex Hybrid Mattress",
+      category: "Mattress",
+      price: 18999,
+      mrp: 22999,
+      image: "https://images.unsplash.com/photo-1616627561954-5c0e5c9e1d6b?w-800&auto=format&fit=crop",
+      specifications: ["King Size", "Latex + Pocket Springs", "Anti-bacterial"],
+      description: "Hybrid mattress combining natural latex with pocket springs for perfect support."
+    },
+    {
+      id: "PROD-005",
+      name: "Buckwheat Hull Pillow",
+      category: "Pillow",
+      price: 1599,
+      mrp: 2199,
+      image: "https://images.unsplash.com/photo-1555041463-a403f8beb8d6?w-800&auto=format&fit=crop",
+      specifications: ["Adjustable", "Hypoallergenic", "Natural Fill"],
+      description: "Naturally adjustable pillow filled with buckwheat hulls for customized support."
+    },
+    {
+      id: "PROD-006",
+      name: "Sleeping Mat for Camping",
+      category: "Mat",
+      price: 1499,
+      mrp: 1999,
+      image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w-800&auto=format&fit=crop",
+      specifications: ["Waterproof", "Insulated", "Compact"],
+      description: "Portable insulated sleeping mat perfect for camping and outdoor activities."
+    }
   ];
 
   // Load cart from localStorage on component mount
@@ -66,6 +117,25 @@ const ProductCatalog = () => {
     if (savedCart) {
       setCartItems(JSON.parse(savedCart));
     }
+  }, []);
+
+  // Load selected customer from localStorage on component mount
+  useEffect(() => {
+    const savedCustomer = localStorage.getItem('selectedCustomer');
+    if (savedCustomer) {
+      setSelectedCustomer(savedCustomer);
+    }
+  }, []);
+
+  // Initialize products with dummy data
+  useEffect(() => {
+    // Simulate API loading delay
+    const timer = setTimeout(() => {
+      setProducts(dummyProducts);
+      setLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Save cart to localStorage whenever it changes
@@ -80,126 +150,13 @@ const ProductCatalog = () => {
     }
   }, [selectedCustomer]);
 
-  // Load selected customer from localStorage on component mount
-  useEffect(() => {
-    const savedCustomer = localStorage.getItem('selectedCustomer');
-    if (savedCustomer) {
-      setSelectedCustomer(savedCustomer);
-    }
-  }, []);
-
-  // Step 1: Get Access Token
-  const getAccessToken = async () => {
-    const salesforceUrl =
-      "https://centuaryindia-dev-ed.develop.my.salesforce.com/services/oauth2/token";
-    const clientId =
-      "3MVG9nSH73I5aFNh79L8JaABhoZboVvF44jJMEaVNpVy6dzgmTzE_e3R7T2cRQXEJR7gj6wXjRebPYvPGbn1h";
-    const clientSecret =
-      "18AFFC6E432CC5A9D48D2CECF6386D59651E775DF127D9AC171D28F8DC7C01B9";
-
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", clientId);
-    params.append("client_secret", clientSecret);
-
-    try {
-      const response = await axios.post(salesforceUrl, params, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      setAccessToken(response.data.access_token);
-      console.log("✅ Access Token:", response.data.access_token);
-      return response.data.access_token;
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.message || err.message 
-        : "Unknown error occurred";
-      
-      console.error("❌ Error fetching access token:", errorMessage);
-      setError("Failed to fetch access token.");
-      return null;
-    }
-  };
-
-  const fetchProducts = async (token: string) => {
-    try {
-      const query = `SELECT 
-    Product2.Id, 
-    Product2.Name, 
-    Product2.Family, 
-    Product2.MRP__c, 
-    Product2.Prod_Img_Url__c, 
-    Product2.Description, 
-    Product2.Specifications__c,
-    UnitPrice
-    FROM PricebookEntry
-    WHERE Pricebook2.IsStandard = true
-    AND IsActive = true
-    AND Product2.IsActive = true
-    AND Product2.Family IN ('Mattress', 'Pillow', 'Mat')
-`;
-      const encodedQuery = encodeURIComponent(query);
-      const queryUrl = `https://centuaryindia-dev-ed.develop.my.salesforce.com/services/data/v62.0/query?q=${encodedQuery}`;
-
-      const response = await axios.get(queryUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const records: ProductRecord[] = response.data.records;
-
-      if (records && records.length > 0) {
-        console.log("📦 Fetched Products:", records);
-        
-        // Map the Salesforce data to the product format needed by the component
-        const mappedProducts = records.map(record => ({
-          id: record.Product2.Id,
-          name: record.Product2.Name,
-          category: record.Product2.Family,
-          price: record.UnitPrice,
-          mrp: record.Product2.MRP__c,
-          image: record.Product2.Prod_Img_Url__c,
-          specifications: record.Product2.Specifications__c ? 
-            record.Product2.Specifications__c.split(';') : [],
-          description: record.Product2.Description
-        }));
-        
-        setProducts(mappedProducts);
-      } else {
-        console.log("ℹ️ No product records found.");
-        setProducts([]);
-      }
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.message || err.message 
-        : "Unknown error occurred";
-      
-      console.error("❌ Error fetching data:", errorMessage);
-      setError("Failed to fetch data from Salesforce.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const initializeData = async () => {
-      const token = await getAccessToken();
-      if (token) {
-        await fetchProducts(token);
-      }
-    };
-    
-    initializeData();
-  }, []);
-
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: Product) => {
     if (!selectedCustomer) {
       toast.error("Please select a customer first!");
       return;
@@ -245,14 +202,6 @@ const ProductCatalog = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-lg">Loading products...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-lg text-red-500">{error}</div>
       </div>
     );
   }
@@ -345,7 +294,7 @@ const ProductCatalog = () => {
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Specifications:</div>
                     <div className="flex flex-wrap gap-1">
-                      {product.specifications.map((spec: string, index: number) => (
+                      {product.specifications.map((spec, index) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {spec}
                         </Badge>
@@ -356,7 +305,7 @@ const ProductCatalog = () => {
 
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="text-xl font-bold text-green-600">₹{product.price?.toLocaleString()}</div>
+                    <div className="text-xl font-bold text-green-600">₹{product.price.toLocaleString()}</div>
                     {product.mrp && (
                       <div className="text-sm text-gray-500 line-through">₹{product.mrp.toLocaleString()}</div>
                     )}
@@ -388,6 +337,15 @@ const ProductCatalog = () => {
           );
         })}
       </div>
+
+      {/* No products found message */}
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-12">
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">No products found</h3>
+          <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+        </div>
+      )}
 
       {cartItems.length > 0 && (
         <div className="fixed bottom-4 right-4">
